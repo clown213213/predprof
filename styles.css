@@ -55,14 +55,14 @@ textarea {
 .messages #button {
     position: absolute;
     top:0;
-    right:0;
+    right: 2.35em;
     font-size:2em;
 }
 
 .messages #button2 {
     position: absolute;
     top:0;
-    right: 2.3em;
+    right:0;
     font-size:2em;
 }
 
