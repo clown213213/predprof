@@ -1,0 +1,76 @@
+* {
+    margin:0;
+    box-sizing: border-box;
+    font-family: monospace;
+}
+
+body {
+    overscroll-behavior: contain;
+}
+
+textarea {
+    background-color: #fefefe;
+    color: #888;
+    resize: none;
+    font-size:2em;
+    width: 100%;
+    height: 100%;
+}
+
+.desktop-app {
+    width: 100vw;
+    height: 100vh;
+    display:grid;
+    grid-template-rows: 1fr 100px;
+    grid-template-columns: 40% 60%;
+    grid-template-areas: 
+        "editor canvas"
+        "messages canvas"
+}
+
+.mobile-app {
+    width: 1400px;
+    height: 1000px;
+    display:grid;
+    grid-template-rows: 800px 200px;
+    grid-template-columns: 400px 1000px;
+    grid-template-areas: 
+        "editor canvas"
+        "messages canvas"
+}
+
+.mobile-app textarea {
+    font-size: 1.5em;
+}
+
+.editor {
+    grid-area: editor;
+}
+
+.messages {
+    position: relative;
+    grid-area: messages;
+}
+
+.messages #button {
+    position: absolute;
+    top:0;
+    right:0;
+    font-size:2em;
+}
+
+.messages #error {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding:10px;
+    background-color: Red;
+    color: Black;
+    font-weight: 600;
+    display: none;
+}
+
+.canvas {
+    grid-area:canvas;
+}
