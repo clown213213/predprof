@@ -1,6 +1,3 @@
-/**Код честно позаимствован (с кучей доработок) с http://codepen.io/lonekorean/pen/gaLEMR. Will Boyd, спасибо тебе*/
-var isIE;
-var highlight, textarea;
 function startHighlight(fieldId) {
 	textarea = document.getElementById(fieldId);
 	highlight = createDiv(fieldId);
@@ -33,7 +30,6 @@ function handleInput() {
   highlight.innerHTML = highlightedText;
 }
 
-//функция автоматической прокрутки div контейнера вслед за текстовым полем
 function handleScroll() {
   highlight.scrollTop = textarea.scrollTop;
   highlight.scrollLeft = textarea.scrollLeft;
@@ -47,8 +43,6 @@ function fixFirefox() {
 }
 
 function createDiv(fieldId) {
-	//Создаётся div, по стилю дублирующий текстовое поле, но расположенный над ним
-	//Также у тегов mark убирается фон.
 	
 	var div = document.createElement('div');
 	div.id = fieldId+'HighlightDiv';
@@ -60,13 +54,12 @@ function createDiv(fieldId) {
 	return textarea.parentNode.appendChild(div);
 }
 
-// http://www.javascriptkit.com/dhtmltutors/dhtmlcascade4.shtml
 function getStyle(el, cssprop) {
-	if (el.currentStyle) return el.currentStyle[cssprop]; // IE & Opera
-	else if (document.defaultView && document.defaultView.getComputedStyle) // Gecko & WebKit
+	if (el.currentStyle) return el.currentStyle[cssprop];
+	else if (document.defaultView && document.defaultView.getComputedStyle)
 		return document.defaultView.getComputedStyle(el, '')[cssprop];
-		else // try and get inline style
-			return el.style[cssprop]; // XXX I have no idea who is using that
+		else
+			return el.style[cssprop];
 }
 
 
