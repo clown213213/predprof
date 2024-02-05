@@ -40,11 +40,6 @@ kumir.parseCommand = function(commands) {
 	commands.split('\n').forEach(function(command) {
 				if(/\sprocedure\s/.test(command)) command = kumir.parseFunction(command); //замена объявления функции
 		command = command.replace(/\soutput\s(.+)/g,' kumir.print( $1 );') //замена команды вывода
-		.replace(/\sinput\s(.+)/g,' [$1]:=kumir.read([$1])') //замена команды ввода
-		.replace(/\svalue\s+\:=/g,'return ') //замена возвращаемого значения функции
-		.replace(/\s(?:log|lit|str|int|float)\s(.+)/g,' var $1;') //замена объявления переменных
-		 //добавление пробела после открывающей скобки
-		 //добавление пробела перед закрывающей скобкой
 		.replace(/\sifBlock (.+)/g ,'if (robot.on$1){')
 		.replace(/\selse\s/g,' }else{ ') //замена начала альтернативных команд
 		.replace(/\sendif\s/g,' } ') //замена конца условия
