@@ -49,16 +49,16 @@ textarea {
 
 .messages #button {
     position: absolute;
-    top: 0;
-    right: 2.9em;
+    bottom:0;
+    left: 19em;
     font-size: 2em
 }
 
 .messages #button2 {
     position: absolute;
-    top:0;
-    right:0;
-    font-size:2em;
+    bottom:0;
+    left: 16em;
+    font-size: 2em
 }
 
 .messages #error {
