@@ -200,8 +200,7 @@ robot.parseCommand = function (commands) {
     robot.y = robot.startPos.y;
     robot.moveRobot(0,0);
     let jsCommand = '';
-    if (/\sRun\s+Робот\s/.test(commands)) {
-        commands = commands.replace(/\sRun\s+Робот\s/g, '');
+    if (commands) {
         commands.split('\n').forEach(function (command) {
             //парсинг команд движения и закрашивания
             command = command.replace(/\sright (.+)/g , ' robot.right ($1)');
