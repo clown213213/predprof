@@ -1,5 +1,37 @@
 const kumir = {};
 
+document.getElementById('loadButton').addEventListener('click', function() {
+	var fileInput = document.getElementById('fileInput');
+	if(fileInput.files.length === 0) {
+	  alert('Пожалуйста, выберите файл!');
+	  return;
+	}
+  
+	var file = fileInput.files[0];
+	
+	if (file.name.split('.').pop() !== 'txt') {
+	  alert('Пожалуйста, выберите текстовый файл с расширением .txt!');
+	  return;
+	}
+	
+	var reader = new FileReader();
+	
+	reader.onload = function(e) {
+	  try {
+		var commands = e.target.result;
+		kumir.start(commands);
+	  } catch(err) {
+		kumir.error("Ошибка при загрузке файла: " + err.message);
+	  }
+	};
+	
+	reader.onerror = function(e) {
+	  kumir.error("Не удалось прочитать файл: " + e.target.error);
+	};
+	
+	reader.readAsText(file);
+  });
+
 //запуск транспайлера
 kumir.start = function(commands) {
 	
