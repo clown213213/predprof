@@ -1,5 +1,4 @@
 const robot = {}
-//стартовые настройки
 robot.x = 0;
 robot.y = 0;
 robot.img = new Image();
@@ -37,12 +36,6 @@ class Wall {
 }
 
 robot.create = function (container) {
-
-    //let a = (container.offsetHeight - robot.WALL_SIZE) / (robot.WALL_SIZE + robot.CELL_SIZE) >> 0
-    //let b = (container.offsetWidth - robot.WALL_SIZE) / (robot.WALL_SIZE + robot.CELL_SIZE) >> 0
-
-    //robot.HCELLS=b
-    //robot.VCELLS=a
 
     for (let i = 0; i <= robot.VCELLS; i++) {
         for (let j = 0; j <= robot.HCELLS; j++) {
@@ -103,7 +96,6 @@ robot.draw = function (move) {
     if(move) robot.drawQueue.push(canvas);
 }
 
-//Долгий тап для мобильных устройств
 robot.delay=null;
 robot.canvas.addEventListener('touchstart', function(e) {
     e.offsetX = e.touches[0].pageX-robot.canvas.offsetLeft
@@ -138,7 +130,6 @@ robot.setPosition = function (x, y) {
     robot.draw();
 };
 
-//функции проверки на закрашенность и наличие стен
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
@@ -155,7 +146,6 @@ robot.onBottom = function (wall) {
     return !((robot.walls['h' + (robot.y + 1) + '_' + robot.x].isActive || (robot.y == robot.VCELLS - 1)) == wall);
 }
 
-//функции движения
 robot.right = function (n) {
 	console.log(n)
     if (robot.onRight(true)) robot.moveRobot(n, 0);
@@ -177,14 +167,12 @@ robot.down = function (n) {
     else robot.fail();
 }
 
-//Функция, срабатывающая при столкновении
 robot.fail = function () {
     robot.cells[robot.y + '_' + robot.x].isFail = true;
     robot.draw(true);
     throw 'collision';
 }
 
-//Очистка поля
 robot.clean = function () {
     for (let i in robot.cells) {
         robot.cells[i].isFill = false;
@@ -193,16 +181,15 @@ robot.clean = function () {
     robot.draw();
 }
 
-//Парсинг команд Робота
 robot.parseCommand = function (commands) {
     robot.clean();
     robot.x = robot.startPos.x;
     robot.y = robot.startPos.y;
     robot.moveRobot(0,0);
     let jsCommand = '';
-    if (commands) {
+    if (/\sRun\s+Робот\s/.test(commands)) {
+        commands = commands.replace(/\sRun\s+Робот\s/g, '');
         commands.split('\n').forEach(function (command) {
-            //парсинг команд движения и закрашивания
             command = command.replace(/\sright (.+)/g , ' robot.right ($1)');
             command = command.replace(/\sleft (.+)/g, ' robot.left ($1)');
             command = command.replace(/\sup (.+)/g, ' robot.up ($1)');
