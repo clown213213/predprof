@@ -47,12 +47,21 @@ textarea {
     grid-area: editor;
 }
 
-.messages {
-    position: relative;
-    grid-area: messages;
+.messages #button {
+    position: absolute;
+    top: 0;
+    right: 2.9em;
+    font-size: 2em
 }
 
 .messages #button {
+    position: absolute;
+    top:0;
+    right:0;
+    font-size:2em;
+}
+
+.messages #button2 {
     position: absolute;
     top:0;
     right:0;
