@@ -57,7 +57,7 @@ kumir.start = function(commands) {
 kumir.parseCommand = function(commands) {
 
 	let jsCommand ='';
-	
+
 	commands.split('\n').forEach(function(command) {
 				if(/\sprocedure\s/.test(command)) command = kumir.parseFunction(command);
 		command = command.replace(/\sifBlock (.+)/g ,'if (robot.on$1){')
