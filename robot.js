@@ -37,6 +37,7 @@ class Wall {
 
 robot.create = function (container) {
 
+
     for (let i = 0; i <= robot.VCELLS; i++) {
         for (let j = 0; j <= robot.HCELLS; j++) {
             robot.cells[i + '_' + j] = new Cell(j, i);
@@ -187,8 +188,7 @@ robot.parseCommand = function (commands) {
     robot.y = robot.startPos.y;
     robot.moveRobot(0,0);
     let jsCommand = '';
-    if (/\sRun\s+Робот\s/.test(commands)) {
-        commands = commands.replace(/\sRun\s+Робот\s/g, '');
+    if (commands) {
         commands.split('\n').forEach(function (command) {
             command = command.replace(/\sright (.+)/g , ' robot.right ($1)');
             command = command.replace(/\sleft (.+)/g, ' robot.left ($1)');
