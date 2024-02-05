@@ -37,7 +37,6 @@ class Wall {
 
 robot.create = function (container) {
 
-
     for (let i = 0; i <= robot.VCELLS; i++) {
         for (let j = 0; j <= robot.HCELLS; j++) {
             robot.cells[i + '_' + j] = new Cell(j, i);
