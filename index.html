@@ -18,9 +18,10 @@
 			<textarea id='input' spellcheck='false'>Run Робот&#13;&#10;procedure&#13;&#10;&#13;&#10;endproc</textarea>
 		</div>
 		<div class="messages">
-				<textarea id='output' disabled = 'true'></textarea>
+			<textarea id='output' disabled = 'true'></textarea>
 				<input type='button' value='Run' id='button'>
-				<div id='error'></div>
+				<input type='button' value='Stop' id='button2'>
+			<div id='error'></div>
 		</div>
 		<div class="canvas" id='robotBoard'>
 		</div>	
@@ -46,6 +47,14 @@
 		output.value = '';
 		error.style.display = 'none';
 		kumir.start(input.value);
+	}
+	
+	let abort = false;
+
+	button2.onclick = function() {
+		output.value = '';
+		error.style.display = '';
+		abort = true;
 	}
 </script>
 </body>
