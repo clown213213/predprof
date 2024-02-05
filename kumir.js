@@ -57,7 +57,7 @@ kumir.start = function(commands) {
 kumir.parseCommand = function(commands) {
 
 	let jsCommand ='';
-
+	
 	commands.split('\n').forEach(function(command) {
 				if(/\sprocedure\s/.test(command)) command = kumir.parseFunction(command);
 		command = command.replace(/\sifBlock (.+)/g ,'if (robot.on$1){')
@@ -68,6 +68,7 @@ kumir.parseCommand = function(commands) {
 		.replace(/\sendproc\s/g,' }; ')
 		.replace(/\sstartproc\s/g,' { ')	
 		.replace(/\scall\s(.+)/g,' $1();')
+		.replace(/\sset (.+) =/g,' var $1 =')
 		
 		
 		jsCommand+=command+'\n';
