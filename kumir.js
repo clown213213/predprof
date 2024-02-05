@@ -39,8 +39,7 @@ kumir.parseCommand = function(commands) {
 	//Парсинг основных команд
 	commands.split('\n').forEach(function(command) {
 				if(/\sprocedure\s/.test(command)) command = kumir.parseFunction(command); //замена объявления функции
-		command = command.replace(/\soutput\s(.+)/g,' kumir.print( $1 );') //замена команды вывода
-		.replace(/\sifBlock (.+)/g ,'if (robot.on$1){')
+		command = command.replace(/\sifBlock (.+)/g ,'if (robot.on$1){')
 		.replace(/\selse\s/g,' }else{ ') //замена начала альтернативных команд
 		.replace(/\sendif\s/g,' } ') //замена конца условия
 		.replace(/\srepeat (.+)/g,'for(i=1;i<=($1);i++){')
