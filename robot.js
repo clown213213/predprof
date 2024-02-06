@@ -189,10 +189,10 @@ robot.parseCommand = function (commands) {
     let jsCommand = '';
     if (commands) {
         commands.split('\n').forEach(function (command) {
-            command = command.replace(/\sright (.+)/g , ' robot.right ($1)');
-            command = command.replace(/\sleft (.+)/g, ' robot.left ($1)');
-            command = command.replace(/\sup (.+)/g, ' robot.up ($1)');
-            command = command.replace(/\sdown (.+)/g, ' robot.down ($1)');
+            command = command.replace(/\sRIGHT (.+)/g , ' robot.right ($1)');
+            command = command.replace(/\sLEFT (.+)/g, ' robot.left ($1)');
+            command = command.replace(/\sUP (.+)/g, ' robot.up ($1)');
+            command = command.replace(/\sDOWN (.+)/g, ' robot.down ($1)');
 
             jsCommand += command + '\n';
         });
