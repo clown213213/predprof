@@ -59,16 +59,16 @@ kumir.parseCommand = function(commands) {
 	let jsCommand ='';
 	
 	commands.split('\n').forEach(function(command) {
-				if(/\sprocedure\s/.test(command)) command = kumir.parseFunction(command);
-		command = command.replace(/\sifBlock (.+)/g ,'if (robot.on$1){')
-		.replace(/\selse\s/g,' }else{ ')
-		.replace(/\sendif\s/g,' } ')
-		.replace(/\srepeat (.+)/g,'for(i=1;i<=($1);i++){')
-		.replace(/\sendrepeat\s/g,' } ')
-		.replace(/\sendproc\s/g,' }; ')
-		.replace(/\sstartproc\s/g,' { ')	
-		.replace(/\scall\s(.+)/g,' $1();')
-		.replace(/\sset (.+) =/g,' var $1 =')
+				if(/\sPROCEDURE\s/.test(command)) command = kumir.parseFunction(command);
+		command = command.replace(/\sIFBLOCK (.+)/g ,'if (robot.on$1){')
+		.replace(/\sELSE\s/g,' }else{ ')
+		.replace(/\sENDIF\s/g,' } ')
+		.replace(/\sREPEAT (.+)/g,'for(i=1;i<=($1);i++){')
+		.replace(/\sENDREPEAT\s/g,' } ')
+		.replace(/\sENDPROC\s/g,' }; ')
+		.replace(/\sSTARTPROC\s/g,' { ')	
+		.replace(/\sCALL\s(.+)/g,' $1();')
+		.replace(/\sSET (.+) =/g,' var $1 =')
 		
 		
 		jsCommand+=command+'\n';
@@ -77,8 +77,8 @@ kumir.parseCommand = function(commands) {
 }
 
 kumir.parseFunction = function(command) {
-	return command.replace(/procedure\s+$/g,'')
-				.replace(/procedure\s(.+)/g,'function $1 (){')
+	return command.replace(/PROCEDURE\s+$/g,'')
+				.replace(/PROCEDURE\s(.+)/g,'function $1 (){')
 				.replace(/\s*(?:log|lit|str|int|float)/g,' ')
 }
 
