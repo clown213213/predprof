@@ -1,4 +1,4 @@
-const kumir = {};
+const program = {};
 
 document.getElementById('loadButton').addEventListener('click', function() {
 	var fileInput = document.getElementById('fileInput');
@@ -19,20 +19,20 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	reader.onload = function(e) {
 	  try {
 		var commands = e.target.result;
-		kumir.start(commands);
+		program.start(commands);
 	  } catch(err) {
-		kumir.error("Ошибка при загрузке файла: " + err.message);
+		program.error("Ошибка при загрузке файла: " + err.message);
 	  }
 	};
 	
 	reader.onerror = function(e) {
-	  kumir.error("Не удалось прочитать файл: " + e.target.error);
+	  program.error("Не удалось прочитать файл: " + e.target.error);
 	};
 	
 	reader.readAsText(file);
   });
 
-kumir.start = function(commands) {
+program.start = function(commands) {
 	
 	let substring=commands.match(/'[^']*'|"[^"]*"/g);
 	for (let i in substring) commands = commands.replace(substring[i],'$_'+i);
@@ -42,31 +42,29 @@ kumir.start = function(commands) {
 	robot.tick = 0;
 	if (robot) commands = robot.parseCommand(commands);
 
-	commands = kumir.parseCommand(commands);
+	commands = program.parseCommand(commands);
 	console.log(commands)
 	for (let i in substring) commands = commands.replace('$_'+i,substring[i]);
 
 	console.log(commands)
 
 	try {
-		eval('try{'+commands+'}catch(e){if(e=="collision") kumir.error("Столкновение с препятствием!"); else kumir.error("Ошибка в строке "+e.stack.match(/<anonymous>:(\\d+):/)[1]+"!");}');
+		eval('try{'+commands+'}catch(e){if(e=="collision") pro.error("Столкновение с препятствием!"); else program.error("Ошибка в строке "+e.stack.match(/<anonymous>:(\\d+):/)[1]+"!");}');
 	}
-	catch(e) {kumir.error('Ошибка синтаксиса!');}
+	catch(e) {program.error('Ошибка синтаксиса!');}
 }
 
-kumir.parseCommand = function(commands) {
+program.parseCommand = function(commands) {
 
 	let jsCommand ='';
 	
 	commands.split('\n').forEach(function(command) {
-				if(/\sPROCEDURE\s/.test(command)) command = kumir.parseFunction(command);
+				if(/\sPROCEDURE\s/.test(command)) command = program.parseFunction(command);
 		command = command.replace(/\sIFBLOCK (.+)/g ,'if (robot.on$1){')
-		.replace(/\sELSE\s/g,' }else{ ')
 		.replace(/\sENDIF\s/g,' } ')
 		.replace(/\sREPEAT (.+)/g,'for(i=1;i<=($1);i++){')
 		.replace(/\sENDREPEAT\s/g,' } ')
 		.replace(/\sENDPROC\s/g,' }; ')
-		.replace(/\sSTARTPROC\s/g,' { ')	
 		.replace(/\sCALL\s(.+)/g,' $1();')
 		.replace(/\sSET (.+) =/g,' var $1 =')
 		
@@ -76,20 +74,12 @@ kumir.parseCommand = function(commands) {
 	return jsCommand;
 }
 
-kumir.parseFunction = function(command) {
+program.parseFunction = function(command) {
 	return command.replace(/PROCEDURE\s+$/g,'')
 				.replace(/PROCEDURE\s(.+)/g,'function $1 (){')
-				.replace(/\s*(?:log|lit|str|int|float)/g,' ')
 }
 
-kumir.error = function(errorMsg) {
+program.error = function(errorMsg) {
 	let event = new CustomEvent('error',{detail:errorMsg});
 	document.dispatchEvent(event);
-}
-
-kumir.read = function(args) {
-	let s = prompt('Введите переменные через пробел');
-	s = s.split(' ');
-	for(let i in args) isNaN(s[i]) ? args[i] = s[i] : args[i] = +s[i];
-	return args;
 }
