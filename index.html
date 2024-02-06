@@ -12,7 +12,7 @@
 </div>
 
 <link rel='stylesheet' type='text/css' href='styles.css'>
-<script type='text/javascript' src='kumir.js'></script>
+<script type='text/javascript' src='program.js'></script>
 <script type='text/javascript' src='robot.js'></script>
 <script type='text/javascript' src='highlight.js'></script>
 </head>
@@ -51,7 +51,7 @@
 	button.onclick = function() {
 		output.value = '';
 		error.style.display = 'none';
-		kumir.start(input.value);
+		program.start(input.value);
 	}
 	
 	let abort = false;
