@@ -18,12 +18,8 @@
 </head>
 
 <body>
-
 	<div id="app">
-		<div class="editor">
-			<textarea id='input' placeholder=':Исполнитель GridMaster' spellcheck='false'></textarea>
-		</div>
-
+		<textarea id='input' placeholder=':Исполнитель GridMaster'></textarea>
 
 		<div class="messages">
 			<textarea id='output' disabled = 'true'></textarea>
@@ -32,15 +28,12 @@
 			<div id='error'></div>
 		</div>
 
-
 		<div class="canvas" id='robotBoard'>
 		</div>	
-
 	</div>
 
 <script type='text/javascript'>
-	if(screen.orientation.type.includes('portrait')) document.querySelector('#app').classList.add('mobile-app')
-	else document.querySelector('#app').classList.add('desktop-app')
+	document.querySelector('#app').classList.add('fullGrid')
 
 	input = document.getElementById('input');
 	output = document.getElementById('output');
@@ -54,6 +47,7 @@
 		error.innerHTML = '';
 		error.innerHTML+=e.detail;
 	});
+	
 	button.onclick = function() {
 		output.value = '';
 		error.style.display = 'none';
