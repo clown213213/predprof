@@ -82,13 +82,6 @@ kumir.parseFunction = function(command) {
 				.replace(/\s*(?:log|lit|str|int|float)/g,' ')
 }
 
-kumir.print = function() {
-	let message = '';
-	for (let i in arguments) message+=arguments[i];
-	let event = new CustomEvent('print',{detail:message});
-	document.dispatchEvent(event);
-}
-
 kumir.error = function(errorMsg) {
 	let event = new CustomEvent('error',{detail:errorMsg});
 	document.dispatchEvent(event);
