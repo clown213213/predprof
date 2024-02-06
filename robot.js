@@ -81,7 +81,7 @@ robot.draw = function (move) {
 
     for (let i in robot.cells) {
         let cell = robot.cells[i];
-        ctx.fillStyle = (cell.isFail) ? '#F44336' : (cell.isFill) ? '#9E9E9E' : '#8BC34A';
+        ctx.fillStyle = (cell.isFail) ? '#F44336' : (cell.isFill) ? '#9E9E9E' : '#8BC34A';   /* #5B7BBB */
         ctx.fillRect(cell.left, cell.top, robot.CELL_SIZE, robot.CELL_SIZE);
     }
 
@@ -89,7 +89,7 @@ robot.draw = function (move) {
 
     for (let i in robot.walls) {
         let wall = robot.walls[i];
-        ctx.fillStyle = (wall.isActive || wall.isHover) ? '#FFD54F' : '#4CAF50';
+        ctx.fillStyle = (wall.isActive || wall.isHover) ? '#FFD54F' : '#4CAF50';   /* #4C64AF */
         ctx.fillRect(wall.left, wall.top, wall.width, wall.height);
     }
 
@@ -119,16 +119,31 @@ robot.canvas.addEventListener('touchmove', function (e) {clearTimeout(robot.dela
 
 
 robot.moveRobot = function (x, y) {
-    robot.x += x;
-    robot.y += y;
-    robot.draw(true);
+    if (x != 0 && x > 0) {
+        for(let k = 0; k != x; k++) {
+            robot.x += 1;
+            robot.draw(true);
+        }
+    }
+    if (x != 0 && x < 0) {
+        for(let k = 0; k != x; k--) {
+            robot.x -= 1;
+            robot.draw(true);
+        }
+    }
+    if (y != 0 && y > 0) {
+        for(let k = 0; k != y; k++) {
+            robot.y += 1;
+            robot.draw(true);
+        }
+    }
+    if (y != 0 && y < 0) {
+        for(let k = 0; k != y; k--) {
+            robot.y -= 1;
+            robot.draw(true);
+        }
+    }
 }
-
-robot.setPosition = function (x, y) {
-    robot.x = x;
-    robot.y = y;
-    robot.draw();
-};
 
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
