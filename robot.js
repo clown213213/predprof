@@ -133,37 +133,37 @@ robot.setPosition = function (x, y) {
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
-robot.onRight = function (wall) {
+robot.onRIGHT = function (wall) {
     return !((robot.walls['v' + robot.y + '_' + (robot.x + 1)].isActive || (robot.x == robot.HCELLS - 1)) == wall);
 }
-robot.onLeft = function (wall) {
+robot.onLEFT = function (wall) {
     return !((robot.walls['v' + robot.y + '_' + robot.x].isActive || (robot.x == 0)) == wall);
 }
-robot.onTop = function (wall) {
+robot.onUP = function (wall) {
     return !((robot.walls['h' + robot.y + '_' + robot.x].isActive || (robot.y == 0)) == wall);
 }
-robot.onBottom = function (wall) {
+robot.onDOWN = function (wall) {
     return !((robot.walls['h' + (robot.y + 1) + '_' + robot.x].isActive || (robot.y == robot.VCELLS - 1)) == wall);
 }
 
 robot.right = function (n) {
 	console.log(n)
-    if (robot.onRight(true)) robot.moveRobot(n, 0);
+    if (robot.onRIGHT(true)) robot.moveRobot(n, 0);
     else robot.fail();
 }
 robot.left = function (n) {
 	console.log(n)
-    if (robot.onLeft(true)) robot.moveRobot(-n, 0);
+    if (robot.onLEFT(true)) robot.moveRobot(-n, 0);
     else robot.fail();
 }
 robot.up = function (n) {
 	console.log(n)
-    if (robot.onTop(true)) robot.moveRobot(0, -n);
+    if (robot.onUP(true)) robot.moveRobot(0, -n);
     else robot.fail();
 }
 robot.down = function (n) {
 	console.log(n)
-    if (robot.onBottom(true)) robot.moveRobot(0, n);
+    if (robot.onDOWN(true)) robot.moveRobot(0, n);
     else robot.fail();
 }
 
