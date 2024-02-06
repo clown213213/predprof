@@ -5,7 +5,7 @@ robot.img = new Image();
 robot.canvas = document.createElement('canvas');
 robot.HCELLS = 21;
 robot.VCELLS = 21;
-robot.CELL_SIZE = 31;
+robot.CELL_SIZE = 21;
 robot.WALL_SIZE = 6;
 robot.cells = {};
 robot.walls = {};
@@ -78,7 +78,11 @@ robot.draw = function (move) {
 
 
     let robotCell = robot.cells[robot.y + '_' + robot.x];
-
+    if (robotCell===undefined){
+        console.log("HEREEEE")
+        robotCell = robot.cells[0+ '_' + 0];
+    }
+    console.log(robotCell);
     for (let i in robot.cells) {
         let cell = robot.cells[i];
         ctx.fillStyle = (cell.isFail) ? '#F44336' : (cell.isFill) ? '#9E9E9E' : '#8BC34A';   /* #5B7BBB */
@@ -144,7 +148,6 @@ robot.moveRobot = function (x, y) {
         }
     }
 }
-
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
