@@ -11,15 +11,17 @@ function startHighlight(fieldId) {
 
 	
 function applyhighlight(text) {
-	var keyword = /(^|\s|\()(start|end|startproc|endproc|repeat|endrepeat|procedure|input|output|ifBlock|else|break|Run|call|endif)($|\s|\))/g;
+	var keyword = /(^|\s|\()(START|END|STARTPROC|ENDPROC|REPEAT|ENDREPEAT|PROCEDURE|INPUT|OUTPUT|IFBLOCK|ELSE|BREAK|RUN|CALL|ENDIF)($|\s|\))/g;
 	var assgn = /\:\=/g;
 	var variable = /(^|\s|\()(int|float|log|sim|lit|tab|inttab|floattab|logtab|simtab|littab)($|\s|\))/g;
-	var command = /(^|\s|\()(right|left|up|down|cell)($|\s|\))/g;
+	var number = /(^|\s|\()(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20)($|\s|\))/g;
+	var command = /(^|\s|\()(RIGHT|LEFT|UP|DOWN|CELL)($|\s|\))/g;
 	text = text.replace(/\n$/g, '\n\n')
 			   .replace(assgn, '<mark style="color:Black;">$&</mark>');
 	while (keyword.test(text)) text = text.replace(keyword,'$1<mark style="color:Green;">$2</mark>$3');
 	while (variable.test(text)) text = text.replace(variable,'$1<mark style="color:Orange;">$2</mark>$3');
 	while (command.test(text)) text = text.replace(command,'$1<mark style="color:Blue;">$2</mark>$3');
+	while (number.test(text)) text = text.replace(number,'$1<mark style="color:Orange;">$2</mark>$3');
 	if (isIE) text = text.replace(/ /g, ' <wbr>');
 	return text;
 }
