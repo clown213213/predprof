@@ -11,7 +11,7 @@ function startHighlight(fieldId) {
 
 	
 function applyhighlight(text) {
-	var keyword = /(^|\s|\()(START|END|STARTPROC|ENDPROC|REPEAT|ENDREPEAT|PROCEDURE|INPUT|OUTPUT|IFBLOCK|ELSE|BREAK|RUN|CALL|ENDIF)($|\s|\))/g;
+	var keyword = /(^|\s|\()(START|END|STARTPROC|ENDPROC|REPEAT|ENDREPEAT|PROCEDURE|INPUT|OUTPUT|IFBLOCK|ELSE|BREAK|RUN|CALL|ENDIF|SET X)($|\s|\))/g;
 	var assgn = /\:\=/g;
 	var variable = /(^|\s|\()(int|float|log|sim|lit|tab|inttab|floattab|logtab|simtab|littab)($|\s|\))/g;
 	var number = /(^|\s|\()(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20)($|\s|\))/g;
