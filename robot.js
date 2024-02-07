@@ -6,7 +6,7 @@ robot.canvas = document.createElement('canvas');
 robot.HCELLS = 21;
 robot.VCELLS = 21;
 robot.CELL_SIZE = 21;
-robot.WALL_SIZE = 4;
+robot.WALL_SIZE = 6;
 robot.cells = {};
 robot.walls = {};
 robot.startPos = {'x': 0, 'y': 0};
@@ -148,22 +148,26 @@ robot.moveRobot = function (x, y) {
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
-robot.onRIGHT = function () {
-    if (robot.x === robot.HCELLS - 1) {
-        return false;
-    }
-    else {
-        return true;
+
+robot.onRIGHT = function (wall) {
+    if (robot.x == robot.HCELLS - 1) {
+        return  true;
     }
 }
 robot.onLEFT = function (wall) {
-    return !((robot.walls['v' + robot.y + '_' + robot.x].isActive || (robot.x == 0)) == wall);
+    if (robot.x == 0) {
+        return  true;
+    }
 }
 robot.onUP = function (wall) {
-    return !((robot.walls['h' + robot.y + '_' + robot.x].isActive || (robot.y == 0)) == wall);
+    if (robot.y == 0) {
+        return  true;
+    }
 }
 robot.onDOWN = function (wall) {
-    return !((robot.walls['h' + (robot.y + 1) + '_' + robot.x].isActive || (robot.y == robot.VCELLS - 1)) == wall);
+    if (robot.y == robot.VCELLS - 1) {
+        return  true;
+    }
 }
 
 robot.right = function (n) {
