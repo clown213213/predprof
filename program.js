@@ -38,7 +38,7 @@ program.start = function(commands) {
 	for (let i in substring) commands = commands.replace(substring[i],'$_'+i);
 	
 	commands = ' ' + commands.replace(/\n/g,' \n ') + ' ';
-	commands = commands.replace(/\(/g,' ( ').replace(/\)/g,' ) ');
+	commands = commands.replace(/\(/g,' ( ').replace(/\)/g,') ');
 	robot.tick = 0;
 	if (robot) commands = robot.parseCommand(commands);
 
@@ -60,7 +60,7 @@ program.parseCommand = function(commands) {
 	
 	commands.split('\n').forEach(function(command) {
 				if(/\sPROCEDURE\s/.test(command)) command = program.parseFunction(command);
-		command = command.replace(/\sIFBLOCK (.+)/g ,'if (robot.on$1){')
+		command = command.replace(/\sIFBLOCK (.+)/g ,'if (robot.on$1()){')
 		.replace(/\sENDIF\s/g,' } ')
 		.replace(/\sREPEAT (.+)/g,'for(i=1;i<=($1);i++){')
 		.replace(/\sENDREPEAT\s/g,' } ')
