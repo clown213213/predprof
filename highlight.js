@@ -31,15 +31,15 @@ function handleInput() {
 }
 
 function handleScroll() {
-  highlight.scrollTop = textarea.scrollTop;
-  highlight.scrollLeft = textarea.scrollLeft;
+  highlight.scrollUP = textarea.scrollUP;
+  highlight.scrollLEFT = textarea.scrollLEFT;
 }
 
 function fixFirefox() {
 	if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1)
-		return 'top:'+(textarea.offsetTop-1)+'px;left:'+(textarea.offsetLeft-1)+'px'+';height:'+(parseInt( getStyle(textarea,'height') )-8)+'px'
+		return 'top:'+(textarea.offsetUP-1)+'px;left:'+(textarea.offsetLEFT-1)+'px'+';height:'+(parseInt( getStyle(textarea,'height') )-8)+'px'
 	else 
-		return 'top:'+textarea.offsetTop+'px;left:'+textarea.offsetLeft+'px'+';height:'+getStyle(textarea,'height')
+		return 'top:'+textarea.offsetUP+'px;left:'+textarea.offsetLEFT+'px'+';height:'+getStyle(textarea,'height')
 }
 
 function createDiv(fieldId) {
