@@ -11,7 +11,7 @@ function startHighlight(fieldId) {
 
 	
 function applyhighlight(text) {
-	var keyword = /(^|\s|\()(PROCEDURE|ENDPROC|REPEAT|ENDREPEAT|IFBLOCK|ENDIF|CALL|SET X)($|\s|\))/g;
+	var keyword = /(^|\s|\()(PROCEDURE|ENDPROC|REPEAT|ENDREPEAT|IFBLOCK|ENDIF|CALL|SET)($|\s|\))/g;
 	var assgn = /\:\=/g;
 	var number = /(^|\s|\()(0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20)($|\s|\))/g;
 	var command = /(^|\s|\()(RIGHT|LEFT|UP|DOWN)($|\s|\))/g;
