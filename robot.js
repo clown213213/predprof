@@ -6,7 +6,7 @@ robot.canvas = document.createElement('canvas');
 robot.HCELLS = 21;
 robot.VCELLS = 21;
 robot.CELL_SIZE = 21;
-robot.WALL_SIZE = 6;
+robot.WALL_SIZE = 4;
 robot.cells = {};
 robot.walls = {};
 robot.startPos = {'x': 0, 'y': 0};
@@ -15,8 +15,8 @@ class Cell {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.top = (robot.CELL_SIZE + robot.WALL_SIZE) * y + robot.WALL_SIZE;
-        this.left = (robot.CELL_SIZE + robot.WALL_SIZE) * x + robot.WALL_SIZE;
+        this.UP = (robot.CELL_SIZE + robot.WALL_SIZE) * y + robot.WALL_SIZE;
+        this.LEFT = (robot.CELL_SIZE + robot.WALL_SIZE) * x + robot.WALL_SIZE;
         this.isFill = false;
         this.isFail = false;
     }
@@ -26,8 +26,8 @@ class Wall {
     constructor(x, y, isVertical) {
         this.x = x;
         this.y = y;
-        this.top = (robot.CELL_SIZE + robot.WALL_SIZE) * y;
-        this.left = (robot.CELL_SIZE + robot.WALL_SIZE) * x;
+        this.UP = (robot.CELL_SIZE + robot.WALL_SIZE) * y;
+        this.LEFT = (robot.CELL_SIZE + robot.WALL_SIZE) * x;
         this.width = (isVertical) ? robot.WALL_SIZE : robot.CELL_SIZE + robot.WALL_SIZE;
         this.height = (isVertical) ? robot.CELL_SIZE + robot.WALL_SIZE : robot.WALL_SIZE;
         this.isActive = false;
@@ -36,7 +36,6 @@ class Wall {
 }
 
 robot.create = function (container) {
-
     for (let i = 0; i <= robot.VCELLS; i++) {
         for (let j = 0; j <= robot.HCELLS; j++) {
             robot.cells[i + '_' + j] = new Cell(j, i);
@@ -84,15 +83,15 @@ robot.draw = function (move) {
     for (let i in robot.cells) {
         let cell = robot.cells[i];
         ctx.fillStyle = (cell.isFail) ? '#F44336' : (cell.isFill) ? '#9E9E9E' : '#8BC34A';   /* #5B7BBB */
-        ctx.fillRect(cell.left, cell.top, robot.CELL_SIZE, robot.CELL_SIZE);
+        ctx.fillRect(cell.LEFT, cell.UP, robot.CELL_SIZE, robot.CELL_SIZE);
     }
 
-    ctx.drawImage(robot.img, robotCell.left, robotCell.top, robot.CELL_SIZE, robot.CELL_SIZE);
+    ctx.drawImage(robot.img, robotCell.LEFT, robotCell.UP, robot.CELL_SIZE, robot.CELL_SIZE);
 
     for (let i in robot.walls) {
         let wall = robot.walls[i];
         ctx.fillStyle = (wall.isActive || wall.isHover) ? '#FFD54F' : '#4CAF50';   /* #4C64AF */
-        ctx.fillRect(wall.left, wall.top, wall.width, wall.height);
+        ctx.fillRect(wall.LEFT, wall.UP, wall.width, wall.height);
     }
 
     if(move) robot.drawQueue.push(canvas);
@@ -100,15 +99,15 @@ robot.draw = function (move) {
 
 robot.delay=null;
 robot.canvas.addEventListener('touchstart', function(e) {
-    e.offsetX = e.touches[0].pageX-robot.canvas.offsetLeft
-    e.offsetY = e.touches[0].pageY-robot.canvas.offsetTop
+    e.offsetX = e.touches[0].pageX-robot.canvas.offsetLEFT
+    e.offsetY = e.touches[0].pageY-robot.canvas.offsetUP
     robot.delay = setTimeout(()=>check(e),1000)
 
     function check(e){
         for (let i in robot.cells) {
             let cell = robot.cells[i];
-            let x = e.offsetX - cell.left;
-            let y = e.offsetY - cell.top;
+            let x = e.offsetX - cell.LEFT;
+            let y = e.offsetY - cell.UP;
             if ((x > 0) && (x < robot.CELL_SIZE) && (y > 0) && (y < robot.CELL_SIZE)) {
                 robot.startPos = {'x': cell.x, 'y': cell.y};
                 robot.setPosition(cell.x, cell.y);
@@ -122,25 +121,25 @@ robot.canvas.addEventListener('touchmove', function (e) {clearTimeout(robot.dela
 
 robot.moveRobot = function (x, y) {
     if (x != 0 && x > 0) {
-        for(let k = 0; k != x; k++) {
+        for(let k = 0; (k != x) && (robot.x < robot.HCELLS - 1); k++) {
             robot.x += 1;
             robot.draw(true);
         }
     }
     if (x != 0 && x < 0) {
-        for(let k = 0; k != x; k--) {
+        for(let k = 0; (k != x)  && (robot.x > 0); k--) {
             robot.x -= 1;
             robot.draw(true);
         }
     }
     if (y != 0 && y > 0) {
-        for(let k = 0; k != y; k++) {
+        for(let k = 0; (k != y)  && (robot.y < robot.HCELLS - 1); k++) {
             robot.y += 1;
             robot.draw(true);
         }
     }
     if (y != 0 && y < 0) {
-        for(let k = 0; k != y; k--) {
+        for(let k = 0; (k != y) && (robot.y > 0); k--) {
             robot.y -= 1;
             robot.draw(true);
         }
@@ -149,8 +148,13 @@ robot.moveRobot = function (x, y) {
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
-robot.onRIGHT = function (wall) {
-    return !((robot.walls['v' + robot.y + '_' + (robot.x + 1)].isActive || (robot.x == robot.HCELLS - 1)) == wall);
+robot.onRIGHT = function () {
+    if (robot.x === robot.HCELLS - 1) {
+        return false;
+    }
+    else {
+        return true;
+    }
 }
 robot.onLEFT = function (wall) {
     return !((robot.walls['v' + robot.y + '_' + robot.x].isActive || (robot.x == 0)) == wall);
@@ -164,31 +168,27 @@ robot.onDOWN = function (wall) {
 
 robot.right = function (n) {
 	console.log(n)
-    if (robot.onRIGHT(true)) robot.moveRobot(n, 0);
-    else robot.fail();
+    robot.moveRobot(n, 0);
 }
 robot.left = function (n) {
 	console.log(n)
-    if (robot.onLEFT(true)) robot.moveRobot(-n, 0);
-    else robot.fail();
+    robot.moveRobot(-n, 0);
 }
 robot.up = function (n) {
 	console.log(n)
-    if (robot.onUP(true)) robot.moveRobot(0, -n);
-    else robot.fail();
+    robot.moveRobot(0, -n);
 }
 robot.down = function (n) {
 	console.log(n)
-    if (robot.onDOWN(true)) robot.moveRobot(0, n);
-    else robot.fail();
+    robot.moveRobot(0, n);
 }
 
-robot.fail = function () {
+/* robot.fail = function () {
     robot.cells[robot.y + '_' + robot.x].isFail = true;
     robot.draw(true);
     throw 'collision';
 }
-
+*/
 robot.clean = function () {
     for (let i in robot.cells) {
         robot.cells[i].isFill = false;
