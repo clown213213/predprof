@@ -31,55 +31,94 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	
 	reader.readAsText(file);
   });
-
-program.start = function(commands) {
+  program.start = function(commands) {
+	commands = commands.split('\n');
 	
-	let substring=commands.match(/'[^']*'|"[^"]*"/g);
-	for (let i in substring) commands = commands.replace(substring[i],'$_'+i);
-	
-	commands = ' ' + commands.replace(/\n/g,' \n ') + ' ';
-	commands = commands.replace(/\(/g,' ( ').replace(/\)/g,') ');
-	robot.tick = 0;
-	if (robot) commands = robot.parseCommand(commands);
-
-	commands = program.parseCommand(commands);
-	console.log(commands)
-	for (let i in substring) commands = commands.replace('$_'+i,substring[i]);
-
-	console.log(commands)
-
-	try {
-		eval('try{'+commands+'}catch(e){if(e=="collision") pro.error("Столкновение с препятствием!"); else program.error("Ошибка в строке "+e.stack.match(/<anonymous>:(\\d+):/)[1]+"!");}');
+	let repeatCommands = [];
+	let recording = false;
+	let record = false;
+	let times = 0;
+  
+	for (let line of commands) {
+	  if (line.trim() === '') continue;
+  
+	  if (line.toUpperCase().startsWith("REPEAT")) {
+		repeatCommands = [];
+		recording = true;
+		let parts = line.split(/\s+/);
+		times = parseInt(parts[1]);
+		continue;
+	  }
+	  if (recording && !line.toUpperCase().startsWith("ENDREPEAT")) {
+		repeatCommands.push(line);
+		continue;
+	  }
+  
+	  if (line.toUpperCase().startsWith("ENDREPEAT")) {
+		recording = false;
+		for (let i = 0; i < times; i++) {
+		  repeatCommands.forEach(this.executeCommand);
+		}
+		continue;
+	  }
+	  if (line.toUpperCase().startsWith("IFBLOCK")) {
+		ifBlockCommands = [];
+		record = true;
+		let parts = line.split(/\s+/);
+		direction = parts[1];
+		continue;
+	  }
+	  if (record && !line.toUpperCase().startsWith("ENDIF")) {
+		ifBlockCommands.push(line);
+		continue;
+	  }
+	  if (line.toUpperCase().startsWith("ENDIF")) {
+		record = false;
+		if (robot['on' + direction.toLowerCase()]) {
+		  ifBlockCommands.forEach(this.executeCommand);
+		}
+		continue;
+	  }
+  
+	  if (!recording) {
+		this.executeCommand(line);
+	  }
+	  // The rest of the code for IFBLOCK, ENDIF, and other logic should be implemented in executeCommand
 	}
-	catch(e) {program.error('Ошибка синтаксиса!');}
-}
-
-program.parseCommand = function(commands) {
-
-	let jsCommand ='';
-	
-	commands.split('\n').forEach(function(command) {
-				if(/\sPROCEDURE\s/.test(command)) command = program.parseFunction(command);
-		command = command.replace(/\sIFBLOCK (.+)/g ,'if (robot.on$1()){')
-		.replace(/\sENDIF\s/g,' } ')
-		.replace(/\sREPEAT (.+)/g,'for(i=1;i<=($1);i++){')
-		.replace(/\sENDREPEAT\s/g,' } ')
-		.replace(/\sENDPROC\s/g,' }; ')
-		.replace(/\sCALL\s(.+)/g,' $1();')
-		.replace(/\sSET (.+) =/g,' var $1 =')
+	console.log(ifBlockCommands)
+  };
+  
+  program.executeCommand = function(command) {
+	let [instruction, ...args] = command.split(/\s+/);
+	instruction = instruction.toUpperCase();
+	let steps, direction;
+  
+	switch (instruction) {
+	  case 'RIGHT':
+	  case 'LEFT':
+	  case 'UP':
+	  case 'DOWN':
+		if (typeof stopMoving !== 'undefined' && stopMoving) {
+		  return;
+		}
+		steps = parseInt(args[0]);
+		robot[instruction.toLowerCase()](steps);
+		break;
+	  case 'IFBLOCK':
+		direction = args[0].toUpperCase();
+		// If IFBLOCK is meant to trigger event handlers, call them like so:
+		if (robot['on' + direction.toLowerCase()]) {
+		  robot['on' + direction.toLowerCase()]();
+		}
+		break;
+	  case 'ENDIF':
+		// End of IFBLOCK condition
+		break;
+	  case 'SET':
 		
-		
-		jsCommand+=command+'\n';
-	});
-	return jsCommand;
-}
-
-program.parseFunction = function(command) {
-	return command.replace(/PROCEDURE\s+$/g,'')
-				.replace(/PROCEDURE\s(.+)/g,'function $1 (){')
-}
-
+	}
+  };
 program.error = function(errorMsg) {
-	let event = new CustomEvent('error',{detail:errorMsg});
-	document.dispatchEvent(event);
-}
+  let event = new CustomEvent('error', { detail: errorMsg });
+  document.dispatchEvent(event);
+	}
