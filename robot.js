@@ -117,6 +117,13 @@ robot.canvas.addEventListener('touchstart', function(e) {
 },true)
 robot.canvas.addEventListener('touchend', function (e) {clearTimeout(robot.delay)});
 robot.canvas.addEventListener('touchmove', function (e) {clearTimeout(robot.delay)});
+let stopMoving = false
+startMoving = function(){
+    stopMoving = false
+}
+stopRobot = function(){
+    stopMoving = true
+}
 
 
 robot.moveRobot = function (x, y) {
@@ -144,27 +151,28 @@ robot.moveRobot = function (x, y) {
             robot.draw(true);
         }
     }
+    console.log(stopMoving)
 }
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
 
-robot.onRIGHT = function (wall) {
+robot.onright = function () {
     if (robot.x == robot.HCELLS - 1) {
         return  true;
     }
 }
-robot.onLEFT = function (wall) {
+robot.onleft = function () {
     if (robot.x == 0) {
         return  true;
     }
 }
-robot.onUP = function (wall) {
+robot.onup = function () {
     if (robot.y == 0) {
         return  true;
     }
 }
-robot.onDOWN = function (wall) {
+robot.ondown= function () {
     if (robot.y == robot.VCELLS - 1) {
         return  true;
     }
@@ -206,17 +214,13 @@ robot.parseCommand = function (commands) {
     robot.x = robot.startPos.x;
     robot.y = robot.startPos.y;
     robot.moveRobot(0,0);
-    let jsCommand = '';
-    if (commands) {
-        commands.split('\n').forEach(function (command) {
-            command = command.replace(/\sRIGHT (.+)/g , ' robot.right ($1)');
-            command = command.replace(/\sLEFT (.+)/g, ' robot.left ($1)');
-            command = command.replace(/\sUP (.+)/g, ' robot.up ($1)');
-            command = command.replace(/\sDOWN (.+)/g, ' robot.down ($1)');
-
-            jsCommand += command + '\n';
-        });
-        commands = jsCommand;
+    
+    if (typeof stopMoving !== 'undefined' && stopMoving) {
+        return;
     }
-    return commands;
+    
+    if (!commands) {
+        return;
+    }
 }
+
