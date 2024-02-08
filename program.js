@@ -17,108 +17,159 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	var reader = new FileReader();
 	
 	reader.onload = function(e) {
-	  try {
-		var commands = e.target.result;
-		program.start(commands);
-	  } catch(err) {
-		program.error("Ошибка при загрузке файла: " + err.message);
-	  }
-	};
-	
-	reader.onerror = function(e) {
-	  program.error("Не удалось прочитать файл: " + e.target.error);
-	};
+		try {
+		  var commands = e.target.result;
+		  program.start(commands); // Здесь 'this' будет ссылаться на 'program', если 'start' вызывается корректно
+		} catch(err) {
+		  program.error("Ошибка при загрузке файла: " + err.message); // 'error' должен быть методом 'program'
+		}
+	  };
 	
 	reader.readAsText(file);
   });
-  program.start = function(commands) {
-	commands = commands.split('\n');
-	
-	let repeatCommands = [];
-	let recording = false;
-	let record = false;
-	let times = 0;
-  
-	for (let line of commands) {
-	  if (line.trim() === '') continue;
-  
-	  if (line.toUpperCase().startsWith("REPEAT")) {
-		repeatCommands = [];
-		recording = true;
-		let parts = line.split(/\s+/);
-		times = parseInt(parts[1]);
-		continue;
-	  }
-	  if (recording && !line.toUpperCase().startsWith("ENDREPEAT")) {
-		repeatCommands.push(line);
-		continue;
-	  }
-  
-	  if (line.toUpperCase().startsWith("ENDREPEAT")) {
-		recording = false;
-		for (let i = 0; i < times; i++) {
-		  repeatCommands.forEach(this.executeCommand);
-		}
-		continue;
-	  }
-	  if (line.toUpperCase().startsWith("IFBLOCK")) {
-		ifBlockCommands = [];
-		record = true;
-		let parts = line.split(/\s+/);
-		direction = parts[1];
-		continue;
-	  }
-	  if (record && !line.toUpperCase().startsWith("ENDIF")) {
-		ifBlockCommands.push(line);
-		continue;
-	  }
-	  if (line.toUpperCase().startsWith("ENDIF")) {
-		record = false;
-		if (robot['on' + direction.toLowerCase()]) {
-		  ifBlockCommands.forEach(this.executeCommand);
-		}
-		continue;
-	  }
-  
-	  if (!recording) {
-		this.executeCommand(line);
-	  }
-	  // The rest of the code for IFBLOCK, ENDIF, and other logic should be implemented in executeCommand
-	}
-	console.log(ifBlockCommands)
-  };
-  
   program.executeCommand = function(command) {
-	let [instruction, ...args] = command.split(/\s+/);
+	let [instruction, ...args] = command.trim().split(/\s+/);
 	instruction = instruction.toUpperCase();
-	let steps, direction;
+	console.log('Выполняется команда:', command);
   
 	switch (instruction) {
 	  case 'RIGHT':
 	  case 'LEFT':
 	  case 'UP':
-	  case 'DOWN':
-		if (typeof stopMoving !== 'undefined' && stopMoving) {
+	  case 'DOWN': {
+		const steps = isNaN(parseInt(args[0], 10)) ? this.variables[args[0]] : parseInt(args[0], 10);
+		if (typeof robot[instruction.toLowerCase()] === 'function') {
+		  robot[instruction.toLowerCase()](steps);
+		} else {
+		  this.error("Неверная команда движения робота.");
+		}
+		break;
+	  }
+	  case 'SET': {
+		if (args.length === 3 && args[1] === "=") {
+		  let variableName = args[0];
+		  let value = isNaN(parseInt(args[2], 10)) ? this.variables[args[2]] : parseInt(args[2], 10);
+		  if (this.variables === undefined) {
+			this.variables = {};
+		  }
+		  this.variables[variableName] = value;
+		} else {
+		  this.error("Неверный формат команды SET. Используйте: SET <имя_переменной> = <значение>.");
+		}
+		break;
+	  }
+	  case 'CALL': {
+		let procedureName = args[0];
+		if (this.procedures.hasOwnProperty(procedureName)) {
+		  this.procedures[procedureName]();
+		} else {
+		  this.error(`Процедура ${procedureName} не определена.`); // Corrected error message with template literals
+		}
+		break;
+	  }
+}
+  program.error = function(errorMsg) {
+	console.error('Ошибка:', errorMsg);
+  };
+  
+  program.checkCondition = function(condition) {
+	return robot[condition];
+  };
+  
+	}
+  program.start = function(commands) {
+	// Захватываем правильный контекст 'this'
+	const self = this;
+  
+	commands = commands.split('\n');
+	let repeatCommands, times, recordingRepeat = false;
+	let ifBlockCommands, recordingIfBlock = false, direction;
+	let procedureCommands, recordingProcedure = false, procedureName;
+	
+	self.variables = {};
+	self.procedures = {};
+	const processCommand = (line) => {
+		if (recordingProcedure) {
+		  if (line.toUpperCase().startsWith("ENDPROC")) {
+			recordingProcedure = false;
+			self.procedures[procedureName] = ((cmds) => {
+			  return () => {
+				cmds.forEach(self.executeCommand.bind(self));
+			  };
+			})(procedureCommands);
+		  } else {
+			procedureCommands.push(line);
+		  }
 		  return;
 		}
-		steps = parseInt(args[0]);
-		robot[instruction.toLowerCase()](steps);
-		break;
-	  case 'IFBLOCK':
-		direction = args[0].toUpperCase();
-		// If IFBLOCK is meant to trigger event handlers, call them like so:
-		if (robot['on' + direction.toLowerCase()]) {
-		  robot['on' + direction.toLowerCase()]();
+		if (line.toUpperCase().startsWith("REPEAT")) {
+		  let parts = line.split(/\s+/);
+		  let repeatValue = parts[1];
+		  repeatCommands = [];
+		  recordingRepeat = true;
+		  if(isNaN(repeatValue)){
+			if(self.variables.hasOwnProperty(repeatValue)){
+			  times = self.variables[repeatValue];
+			} else {
+			  self.error("Переменная для повторения не найдена.");
+			  recordingRepeat = false;
+			}
+		  } else {
+			times = parseInt(repeatValue, 10);
+		  }
+		  return;
 		}
-		break;
-	  case 'ENDIF':
-		// End of IFBLOCK condition
-		break;
-	  case 'SET':
-		
-	}
-  };
-program.error = function(errorMsg) {
-  let event = new CustomEvent('error', { detail: errorMsg });
-  document.dispatchEvent(event);
-	}
+		if (recordingRepeat && !line.toUpperCase().startsWith("ENDREPEAT")) {
+		  repeatCommands.push(line);
+		  return;
+		}
+	  
+		if (line.toUpperCase().startsWith("ENDREPEAT")) {
+		  recordingRepeat = false;
+		  for (let i = 0; i < times; i++) {
+			repeatCommands.forEach(self.executeCommand.bind(self));
+		  }
+		  return;
+		}
+		if (line.toUpperCase().startsWith("IFBLOCK")) {
+		  ifBlockCommands = [];
+		  recordingIfBlock = true;
+		  let parts = line.split(/\s+/);
+		  direction = parts[1];
+		  return;
+		}
+		if (recordingIfBlock && !line.toUpperCase().startsWith("ENDIF")) {
+		  ifBlockCommands.push(line);
+		  return;
+		}
+		if (line.toUpperCase().startsWith("ENDIF")) {
+		  recordingIfBlock = false;
+		  if (self.checkCondition('on' + direction)) {
+			ifBlockCommands.forEach(self.executeCommand.bind(self));
+		  }
+		  return;
+		}
+	  
+		if (!recordingRepeat && !recordingIfBlock && !recordingProcedure) {
+		  self.executeCommand(line);
+		}
+		if (line.toUpperCase().startsWith("PROCEDURE")) {
+		  procedureCommands = [];
+		  recordingProcedure = true;
+		  procedureName = line.split(/\s+/)[1].toUpperCase();
+		  return;
+		}
+		if (recordingProcedure && !line.toUpperCase().startsWith("ENDPROC")) {
+			procedureCommands.push(line);
+			return;
+			}
+	  };
+
+for (let line of commands) {
+    if (line.trim() === '') continue;
+    line = line.trim();
+    processCommand(line);
+  }
+  
+ 
+}
