@@ -43,7 +43,7 @@ textarea {
     font-size:2.3em;
 }
 
-.messages #button2 {
+.messages #stopButton {
     position: absolute;
     top:0;
     right:0;
