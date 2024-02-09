@@ -72,13 +72,7 @@ program.error = function(errorMsg) {
 	console.error('Ошибка:', errorMsg);
   };
 }
-/*program.checkCondition = function(condition) {
-	console.log(robot[condition])
-	if (typeof robot[condition] === 'function') {
-		return robot[condition]();
-	} 
-};
-*/
+
 
 program.start = function(commands) {
 	// Захватываем правильный контекст 'this'
@@ -92,52 +86,80 @@ program.start = function(commands) {
 	
 	self.variables = {};
 	self.procedures = {};
+	self.ifBlockCommands = {};
 	const executeRepeat = (repeatCommands, times) => {
 		for (let i = 0; i < times; i++) {
 			repeatCommands.forEach(line => processCommand(line));
 		}
 	};
 	const processCommand = (line) => {
-		let currentRepeat = repeatStack[repeatStack.length - 1];
-		if (recordingProcedure) {
-		  if (line.toUpperCase().startsWith("ENDPROC")) {
-			recordingProcedure = false;
-			self.procedures[procedureName] = ((cmds) => {
-			  return () => {
-				cmds.forEach(self.executeCommand.bind(self));
-			  };
-			})(procedureCommands);
-		  } else {
-			procedureCommands.push(line);
-		  }
-		  return;
-		}
 		if (line.toUpperCase().startsWith("REPEAT")) {
-		  let parts = line.split(/\s+/);
-		  let repeatValue = parts[1];
-		  repeatCommands = [];
-		  recordingRepeat = true;
-		  if(isNaN(repeatValue)){
-			if(self.variables.hasOwnProperty(repeatValue)){
-
-			  times = self.variables[repeatValue];
+			let parts = line.split(/\s+/);
+			let repeatValue = parts[1];
+			let times;
+			recordingRepeat = true;
+			
+			if(isNaN(repeatValue)){
+			  if(self.variables.hasOwnProperty(repeatValue)){
+				times = self.variables[repeatValue];
+			  } else {
+				throw new Error("Переменная для повторения не найдена."); // Используйте ваш механизм ошибок
+				// recordingRepeat = false; // не нужно, поскольку в случае ошибки выполнение кода прервётся
+			  }
 			} else {
-			  self.error("Переменная для повторения не найдена.");
-			  recordingRepeat = false;
+			  times = parseInt(repeatValue, 10);
 			}
-		  } else {
-			times = parseInt(repeatValue, 10);
+			
+			repeatStack.push({times: times, commands: []});
+			return;
+		}
+		  
+		  if (recordingRepeat) {
+			if (!line.toUpperCase().startsWith("ENDREPEAT")) {
+			  repeatStack[repeatStack.length - 1].commands.push(line);
+			} else {
+			  recordingRepeat = false; // мы достигли конца повторения, поэтому прекращаем запись
+			  
+			  // Возьмём накопленный блок команд для повторения
+			  const repeatBlock = repeatStack.pop();
+			  for (let i = 0; i < repeatBlock.times; i++) {
+				repeatBlock.commands.forEach((repeatCommand) => {
+				  // Здесь мы должны повторно вызывать processCommand чтобы проверка IFBLOCK также выполнялась каждый раз в цикле REPEAT
+				  processCommand(repeatCommand);
+				});
+			 }
+			}
+			return;
 		  }
-		  repeatStack.push({times: times, commands: []});
-		  return;
 		}
 		if (recordingRepeat && !line.toUpperCase().startsWith("ENDREPEAT")) {
 		  repeatCommands.push(line);
-		  return;
-		}
+		  while (index < commands.length && !commands[index].toUpperCase().startsWith("ENDREPEAT")) {
+			repeatStack[repeatStack.length - 1].commands.push(commands[index]);
+			index++;
+			for (let i = 0; i < times; i++) {
+				repeatStack[repeatStack.length - 1].commands.forEach((repeatCommand) => {
+				  if (repeatCommand.toUpperCase().startsWith("IFBLOCK")) {
+					let repeatParts = repeatCommand.split(/\s+/);
+					let direction = repeatParts[1];
+					if (typeof robot['on' + direction.toUpperCase()] === 'function' &&
+						robot['on' + direction.toUpperCase()]()) {
+					  self.executeCommand(repeatCommand);
+					}
+				  } else {
+					self.executeCommand(repeatCommand);
+				  }
+				});
+			}
+			  
+			  repeatStack.pop(); // Удаление текущего блока повторения после его выполнения
+			  commands = commands.slice(index + 1); // Удаление обработанных команд из основного массива
+			  return;
+			}
 	  
 		if (line.toUpperCase().startsWith("ENDREPEAT")) {
 		  recordingRepeat = false;
+		  const { times, commands } = repeatStack.pop();
 		  for (let i = 0; i < times; i++) {
 			repeatCommands.forEach(self.executeCommand.bind(self));
 		  }
@@ -156,8 +178,10 @@ program.start = function(commands) {
 		}
 		if (line.toUpperCase().startsWith("ENDIF")) {
 		  recordingIfBlock = false;
-		  if (robot.on + direction) {
+		  if (typeof robot['on' + direction.toUpperCase()] === 'function' &&
+        robot['on' + direction.toUpperCase()]()) {
 			ifBlockCommands.forEach(self.executeCommand.bind(self));
+			console.log(robot['on' + direction]())
 		  }
 		  return;
 		}
