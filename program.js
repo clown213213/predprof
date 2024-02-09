@@ -59,7 +59,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		break;
 	  }
 	  case 'CALL': {
-		let procedureName = args[0];
+		let procedureName = args[0].toUpperCase;
 		if (this.procedures.hasOwnProperty(procedureName)) {
 		  this.procedures[procedureName]();
 		} else {
@@ -68,16 +68,19 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		break;
 	  }
 }
-  program.error = function(errorMsg) {
+program.error = function(errorMsg) {
 	console.error('Ошибка:', errorMsg);
   };
-  
-  program.checkCondition = function(condition) {
-	return robot[condition];
-  };
-  
-	}
-  program.start = function(commands) {
+}
+/*program.checkCondition = function(condition) {
+	console.log(robot[condition])
+	if (typeof robot[condition] === 'function') {
+		return robot[condition]();
+	} 
+};
+*/
+
+program.start = function(commands) {
 	// Захватываем правильный контекст 'this'
 	const self = this;
   
@@ -85,10 +88,17 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	let repeatCommands, times, recordingRepeat = false;
 	let ifBlockCommands, recordingIfBlock = false, direction;
 	let procedureCommands, recordingProcedure = false, procedureName;
+	let repeatStack = []
 	
 	self.variables = {};
 	self.procedures = {};
+	const executeRepeat = (repeatCommands, times) => {
+		for (let i = 0; i < times; i++) {
+			repeatCommands.forEach(line => processCommand(line));
+		}
+	};
 	const processCommand = (line) => {
+		let currentRepeat = repeatStack[repeatStack.length - 1];
 		if (recordingProcedure) {
 		  if (line.toUpperCase().startsWith("ENDPROC")) {
 			recordingProcedure = false;
@@ -109,6 +119,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		  recordingRepeat = true;
 		  if(isNaN(repeatValue)){
 			if(self.variables.hasOwnProperty(repeatValue)){
+
 			  times = self.variables[repeatValue];
 			} else {
 			  self.error("Переменная для повторения не найдена.");
@@ -117,6 +128,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		  } else {
 			times = parseInt(repeatValue, 10);
 		  }
+		  repeatStack.push({times: times, commands: []});
 		  return;
 		}
 		if (recordingRepeat && !line.toUpperCase().startsWith("ENDREPEAT")) {
@@ -144,7 +156,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		}
 		if (line.toUpperCase().startsWith("ENDIF")) {
 		  recordingIfBlock = false;
-		  if (self.checkCondition('on' + direction)) {
+		  if (robot.on + direction) {
 			ifBlockCommands.forEach(self.executeCommand.bind(self));
 		  }
 		  return;
