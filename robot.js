@@ -157,24 +157,32 @@ robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
 
-robot.onright = function () {
+robot.onRIGHT = function () {
     if (robot.x == robot.HCELLS - 1) {
         return  true;
+    } else {
+        return false;
     }
 }
-robot.onleft = function () {
+robot.onLEFT = function () {
     if (robot.x == 0) {
         return  true;
+    } else {
+        return false;
     }
 }
-robot.onup = function () {
+robot.onUP = function () {
     if (robot.y == 0) {
         return  true;
+    } else {
+        return false;
     }
 }
-robot.ondown= function () {
+robot.onDOWN= function () {
     if (robot.y == robot.VCELLS - 1) {
         return  true;
+    } else {
+        return false;
     }
 }
 
