@@ -26,7 +26,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	  };
 	
 	reader.readAsText(file);
-  });
+  })
   program.executeCommand = function(command) {
 	let [instruction, ...args] = command.trim().split(/\s+/);
 	instruction = instruction.toUpperCase();
@@ -59,11 +59,15 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		break;
 	  }
 	  case 'CALL': {
-		let procedureName = args[0].toUpperCase;
+		let procedureName = args[0].toUpperCase();
 		if (this.procedures.hasOwnProperty(procedureName)) {
-		  this.procedures[procedureName]();
+		  // Выполнить каждую команду в процедуре
+		  const procedureCommands = this.procedures[procedureName];
+		  for (const procedureCommand of procedureCommands) {
+			this.executeCommand(procedureCommand); // Используйте функцию executeCommand для выполнения команды
+		  }
 		} else {
-		  this.error(`Процедура ${procedureName} не определена.`); // Corrected error message with template literals
+		  this.error(`Процедура ${procedureName} не определена.`);
 		}
 		break;
 	  }
@@ -74,138 +78,98 @@ program.error = function(errorMsg) {
 }
 
 
-program.start = function(commands) {
-	// Захватываем правильный контекст 'this'
+program.start = function(commandsText) {
 	const self = this;
   
-	commands = commands.split('\n');
-	let repeatCommands, times, recordingRepeat = false;
-	let ifBlockCommands, recordingIfBlock = false, direction;
-	let procedureCommands, recordingProcedure = false, procedureName;
-	let repeatStack = []
-	
-	self.variables = {};
-	self.procedures = {};
-	self.ifBlockCommands = {};
-	const executeRepeat = (repeatCommands, times) => {
-		for (let i = 0; i < times; i++) {
-			repeatCommands.forEach(line => processCommand(line));
-		}
-	};
-	const processCommand = (line) => {
-		if (line.toUpperCase().startsWith("REPEAT")) {
-			let parts = line.split(/\s+/);
-			let repeatValue = parts[1];
-			let times;
-			recordingRepeat = true;
-			
-			if(isNaN(repeatValue)){
-			  if(self.variables.hasOwnProperty(repeatValue)){
-				times = self.variables[repeatValue];
-			  } else {
-				throw new Error("Переменная для повторения не найдена."); // Используйте ваш механизм ошибок
-				// recordingRepeat = false; // не нужно, поскольку в случае ошибки выполнение кода прервётся
-			  }
-			} else {
-			  times = parseInt(repeatValue, 10);
-			}
-			
-			repeatStack.push({times: times, commands: []});
-			return;
-		}
-		  
-		  if (recordingRepeat) {
-			if (!line.toUpperCase().startsWith("ENDREPEAT")) {
-			  repeatStack[repeatStack.length - 1].commands.push(line);
-			} else {
-			  recordingRepeat = false; // мы достигли конца повторения, поэтому прекращаем запись
-			  
-			  // Возьмём накопленный блок команд для повторения
-			  const repeatBlock = repeatStack.pop();
-			  for (let i = 0; i < repeatBlock.times; i++) {
-				repeatBlock.commands.forEach((repeatCommand) => {
-				  // Здесь мы должны повторно вызывать processCommand чтобы проверка IFBLOCK также выполнялась каждый раз в цикле REPEAT
-				  processCommand(repeatCommand);
-				});
-			 }
-			}
-			return;
-		  }
-		}
-		if (recordingRepeat && !line.toUpperCase().startsWith("ENDREPEAT")) {
-		  repeatCommands.push(line);
-		  while (index < commands.length && !commands[index].toUpperCase().startsWith("ENDREPEAT")) {
-			repeatStack[repeatStack.length - 1].commands.push(commands[index]);
-			index++;
-			for (let i = 0; i < times; i++) {
-				repeatStack[repeatStack.length - 1].commands.forEach((repeatCommand) => {
-				  if (repeatCommand.toUpperCase().startsWith("IFBLOCK")) {
-					let repeatParts = repeatCommand.split(/\s+/);
-					let direction = repeatParts[1];
-					if (typeof robot['on' + direction.toUpperCase()] === 'function' &&
-						robot['on' + direction.toUpperCase()]()) {
-					  self.executeCommand(repeatCommand);
-					}
-				  } else {
-					self.executeCommand(repeatCommand);
-				  }
-				});
-			}
-			  
-			  repeatStack.pop(); // Удаление текущего блока повторения после его выполнения
-			  commands = commands.slice(index + 1); // Удаление обработанных команд из основного массива
-			  return;
-			}
-	  
-		if (line.toUpperCase().startsWith("ENDREPEAT")) {
-		  recordingRepeat = false;
-		  const { times, commands } = repeatStack.pop();
-		  for (let i = 0; i < times; i++) {
-			repeatCommands.forEach(self.executeCommand.bind(self));
-		  }
-		  return;
-		}
-		if (line.toUpperCase().startsWith("IFBLOCK")) {
-		  ifBlockCommands = [];
-		  recordingIfBlock = true;
-		  let parts = line.split(/\s+/);
-		  direction = parts[1];
-		  return;
-		}
-		if (recordingIfBlock && !line.toUpperCase().startsWith("ENDIF")) {
-		  ifBlockCommands.push(line);
-		  return;
-		}
-		if (line.toUpperCase().startsWith("ENDIF")) {
-		  recordingIfBlock = false;
-		  if (typeof robot['on' + direction.toUpperCase()] === 'function' &&
-        robot['on' + direction.toUpperCase()]()) {
-			ifBlockCommands.forEach(self.executeCommand.bind(self));
-			console.log(robot['on' + direction]())
-		  }
-		  return;
-		}
-	  
-		if (!recordingRepeat && !recordingIfBlock && !recordingProcedure) {
-		  self.executeCommand(line);
-		}
-		if (line.toUpperCase().startsWith("PROCEDURE")) {
-		  procedureCommands = [];
-		  recordingProcedure = true;
-		  procedureName = line.split(/\s+/)[1].toUpperCase();
-		  return;
-		}
-		if (recordingProcedure && !line.toUpperCase().startsWith("ENDPROC")) {
-			procedureCommands.push(line);
-			return;
-			}
-	  };
-
-for (let line of commands) {
-    if (line.trim() === '') continue;
-    line = line.trim();
-    processCommand(line);
-  }
+	const commands = commandsText.split('\n'); // Разбить текст на команды, разделённые новыми строками
+	let repeatStack = []; // Стек для хранения информации о повторениях
+	let recordingIfBlock = false; // Флаг записи условного блока
+	let ifBlockCommands = []; // Команды условного блока
+	let recordingProcedure = false; // Флаг записи процедуры
+	let procedureCommands = []; // Команды процедуры
+	let procedureName; // Имя процедуры
   
- 
-}
+	self.variables = {}; // Переменные программы
+	self.procedures = {}; // Процедуры программы
+	self.ifBlockCommands = {}; // Условные блоки программы
+  
+	// Функция для выполнения блока команд
+	const executeBlock = (blockCommands) => {
+	  for (const command of blockCommands) {
+		self.executeCommand(command);
+	  }
+	};
+  
+	// Функция для обработки отдельной команды
+	const processCommand = (line) => {
+	  if (line.toUpperCase().startsWith("REPEAT")) {
+		const parts = line.split(/\s+/);
+		const repeatValue = parts[1];
+		let times = parseInt(repeatValue, 10);
+  
+		if (isNaN(times)) {
+		  times = self.variables[repeatValue.toUpperCase()] || 0;
+		}
+  
+		repeatStack.push({ times, commands: [] }); // Начать новый блок повторения
+	  }
+	  else if (line.toUpperCase().startsWith("ENDREPEAT")) {
+		const repeatBlock = repeatStack.pop(); // Завершить текущий блок повторения
+		const repeatCommands = repeatBlock.commands;
+  
+		// Если есть вложенные блоки повторения, добавить команды к предыдущему блоку
+		if (repeatStack.length > 0) {
+		  repeatStack[repeatStack.length - 1].commands.push(...Array(repeatBlock.times).fill(repeatCommands).flat());
+		} else {
+		  // Если повторение на верхнем уровне, выполнить блок команд
+		  executeBlock(Array(repeatBlock.times).fill(repeatCommands).flat());
+		}
+	  }
+	  else if (repeatStack.length > 0) {
+		repeatStack[repeatStack.length - 1].commands.push(line); // Добавить команду в текущий блок повторения
+	  }
+	  else if (line.toUpperCase().startsWith("IFBLOCK")) {
+		ifBlockCommands = [];
+	recordingIfBlock = true;
+	const parts = line.split(/\s+/);  // Use 'trim()' to remove leading and trailing whitespace
+	direction = parts[1];
+	return;
+  }
+	  else if (recordingIfBlock && !line.toUpperCase().startsWith("ENDIF")) {
+		ifBlockCommands.push(line); // Добавить команду в условный блок
+	  }
+	  else if (line.toUpperCase().startsWith("ENDIF")) {
+		recordingIfBlock = false; // Завершить запись условного блока
+		if (typeof robot['on' + direction] === 'function' &&
+		robot['on' + direction.toUpperCase()]()) {
+			executeBlock(ifBlockCommands);;
+			console.log(robot['on' + direction]())
+		  }	
+	  return;
+	}
+	  else if (line.toUpperCase().startsWith("PROCEDURE")) {
+		procedureCommands = []; // Начать запись процедуры
+		recordingProcedure = true;
+		procedureName = line.split(/\s+/)[1].toUpperCase(); // Сохранение имени процедуры
+	  }
+	  else if (line.toUpperCase().startsWith("ENDPROC")) {
+		recordingProcedure = false; // Завершить запись процедуры
+		self.procedures[procedureName] = procedureCommands; // Сохранить процедуру
+	  }
+	  else if (recordingProcedure) {
+		procedureCommands.push(line); // Добавить команду в процедуру
+	  }
+	  else {
+		self.executeCommand(line); // Выполнить команду
+	  }
+	};
+  
+	// Обработка каждой команды в тексте
+	for (const line of commands) {
+	  const trimmedLine = line.trim();
+	  if (trimmedLine) {
+		processCommand(trimmedLine);
+	  }
+	}
+  };
+  
