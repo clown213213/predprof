@@ -81,93 +81,103 @@ program.error = function(errorMsg) {
 program.start = function (commandsText) {
 	const self = this;
   
+	self.variables = {};
+	self.procedures = {};
 	const commands = commandsText.split('\n');
-	let repeatStack = [];
+	
+	let currentBlockCommands = []; // Основной массив для временного хранения всех команд
+	let repeatCountStack = []; // Стек для количества повторений
+	let insideRepeat = 0; // Уровень вложенности REPEAT
 	let recordingIfBlock = false;
 	let ifBlockCommands = [];
+	let ifBlockConditionDirection;
 	let recordingProcedure = false;
 	let procedureCommands = [];
 	let procedureName;
-	let ifBlockConditionDirection;
   
-	self.variables = {};
-	self.procedures = {};
+	const MAX_REPEAT_DEPTH = 3; // Максимальный уровень вложенности для REPEAT
   
 	const executeBlock = (blockCommands) => {
-	  blockCommands.forEach((commandOrBlock) => {
-		if (typeof commandOrBlock === 'function') {
-		  commandOrBlock(); // Условные функции теперь напрямую выполняют ifBlock
+	  blockCommands.forEach((command) => {
+		if (typeof command === 'function') {
+		  command();
 		} else {
-		  self.executeCommand(commandOrBlock);
+		  processCommand(command);
 		}
 	  });
 	};
   
-	const processCommand = (line) => {
-	  if (line.toUpperCase().startsWith("REPEAT")) {
-		const parts = line.split(/\s+/);
-		const repeatValue = parts[1];
-		let times = parseInt(repeatValue, 10);
-  
-		if (isNaN(times)) {
-		  times = self.variables[repeatValue.toUpperCase()] || 0;
-		}
-  
-		repeatStack.push({ times, commands: [] });
-	  } else if (line.toUpperCase() === "ENDREPEAT") {
-		const repeatBlock = repeatStack.pop();
-		for (let i = 0; i < repeatBlock.times; i++) {
-		  executeBlock(repeatBlock.commands);
-		}
-	  } else if (line.toUpperCase().startsWith("IFBLOCK")) {
-		// Запись команд в условный блок начинается после обнаружения IFBLOCK
-		recordingIfBlock = true;
-		ifBlockConditionDirection = line.split(/\s+/)[1]; // Сохраняем направление для проверки
-	  } else if (recordingIfBlock && line.toUpperCase() !== "ENDIF") {
-		// Добавление команд воздействия в условный блок
-		ifBlockCommands.push(line);
-	  } else if (line.toUpperCase() === "ENDIF") {
-		// В конце условного блока
-		recordingIfBlock = false;
-		const currentIfBlockCommands = ifBlockCommands.slice(); // Копирование команд блока для выполнения
-		const ifBlockCondition = ifBlockConditionDirection.toUpperCase(); // Перевод направления в верхний регистр для совпадения с именами функций
-		
-		// Переписанная функция для проверки условия и выполнения блока команд
-		const executeIfBlock = () => {
-		  if (robot['on' + ifBlockCondition]()) { // Проверка условия без лишнего условия на typeof
-			executeBlock(currentIfBlockCommands);
-		  }
-		};
-		
-		// Добавление условного блока или его немедленное выполнение
-		if (repeatStack.length > 0) {
-		  repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
-		} else {
-		  executeIfBlock();
-		}
-		ifBlockCommands = []; // Очистка команд условного блока после использования
-	  }  else if (repeatStack.length > 0) {
-		repeatStack[repeatStack.length - 1].commands.push(line);
-	  } else if (line.toUpperCase().startsWith("PROCEDURE")) {
-		procedureCommands = [];
-		recordingProcedure = true;
-		procedureName = line.split(/\s+/)[1].toUpperCase();
-	  } else if (line.toUpperCase() === "ENDPROC") {
-		recordingProcedure = false;
-		self.procedures[procedureName] = procedureCommands.slice();
-		procedureCommands = [];
-	  } else if (recordingProcedure) {
-		procedureCommands.push(line);
+	const startRecordingCommands = () => {
+	  if (insideRepeat < MAX_REPEAT_DEPTH) {
+		insideRepeat++;
+		repeatCountStack.push(null); // Инициализируем место под количество повторений
 	  } else {
-		self.executeCommand(line);
+		// Превышен максимальный уровень вложенности
+		program.error(`Превышен максимальный уровень вложенности REPEAT: ${MAX_REPEAT_DEPTH}`);
 	  }
 	};
   
-	for (const line of commands) {
+	const endRecordingCommands = () => {
+	  const times = repeatCountStack.pop(); // Получаем количество повторений для текущего уровня
+	  if (times !== null) { // Проверяем, что это не заглушка, означающая пропуск блока из-за ограничения уровней
+		const commandsToRepeat = currentBlockCommands;
+		currentBlockCommands = []; 
+		insideRepeat--;
+		for (let i = 0; i < times; i++) {
+		  executeBlock(commandsToRepeat);
+		}
+	  }
+	};
+  
+	const processCommand = (line) => {
+	  if (line.toUpperCase().startsWith("REPEAT")) {
+		const repeatTimes = parseInt(line.split(/\s+/)[1], 10);
+		if (insideRepeat < MAX_REPEAT_DEPTH) {
+		  repeatCountStack[insideRepeat] = repeatTimes; // Задаём количество повторений для текущего уровня
+		}
+		startRecordingCommands();
+	  } else if (line.toUpperCase().includes("ENDREPEAT") && insideRepeat > 0) {
+		endRecordingCommands();
+	  } else if (insideRepeat > 0 && insideRepeat <= MAX_REPEAT_DEPTH) {
+		// Если мы внутри блока REPEAT, добавляем команду в стек
+		currentBlockCommands.push(line);
+	  } else if (line.toUpperCase().startsWith("IFBLOCK")) {
+		recordingIfBlock = true;
+		ifBlockConditionDirection = line.split(/\s+/)[1]; // Сохраняем направление для проверки
+	  } else if (recordingIfBlock && line.toUpperCase() !== "ENDIF") {
+		ifBlockCommands.push(line);
+	  } else if (line.toUpperCase() === "ENDIF") {
+		recordingIfBlock = false;
+	  } else if (line.toUpperCase().startsWith("PROCEDURE")) {
+		recordingProcedure = true;
+		procedureName = line.split(/\s+/)[1].toUpperCase();
+	  } else if (recordingProcedure) {
+		if (line.toUpperCase() === "ENDPROC") {
+		  self.procedures[procedureName] = procedureCommands.slice();
+		  procedureCommands = [];
+		  recordingProcedure = false;
+		} else {
+		  procedureCommands.push(line);
+		}
+	  } else if (insideRepeat === 0) {
+		self.executeCommand(line); // Непосредственное выполнение команды за пределами REPEAT
+	  }
+	};
+  
+	commands.forEach((line) => {
 	  const trimmedLine = line.trim();
 	  if (trimmedLine) {
 		processCommand(trimmedLine);
 	  }
-	}
+	});
   };
+  
+  program.error = function (errorMessage) {
+	// Вывод сообщения об ошибке
+	console.error(errorMessage);
+  };
+  
+  
+  
+
   
