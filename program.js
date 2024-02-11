@@ -118,11 +118,12 @@ program.start = function(commandsText) {
 		if (line.toUpperCase() === "ENDIF") {
 		  recordingIfBlock = false;
 		  insideIfBlock = false; 
+		  const currentIfBlockCommands = ifBlockCommands.slice()
 		  nestingLevel--;  
 		  
 		  const executeIfBlock = () => {
 			if (robot['on' + ifBlockConditionDirection.toUpperCase()]()) {
-			  executeBlock(ifBlockCommands.slice());
+			  executeBlock(currentIfBlockCommands);
 			}
 		  };
 		  
