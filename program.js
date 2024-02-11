@@ -78,80 +78,33 @@ program.error = function(errorMsg) {
 }
 
 
-program.start = function (commandsText) {
+program.start = function(commandsText) {
 	const self = this;
   
-	self.variables = {};
-	self.procedures = {};
 	const commands = commandsText.split('\n');
-	
-	let currentBlockCommands = []; // Основной массив для временного хранения всех команд
-	let repeatCountStack = []; // Стек для количества повторений
-	let insideRepeat = 0; // Уровень вложенности REPEAT
+	let repeatStack = [];
 	let recordingIfBlock = false;
 	let ifBlockCommands = [];
-	let ifBlockConditionDirection;
 	let recordingProcedure = false;
 	let procedureCommands = [];
 	let procedureName;
+	let ifBlockConditionDirection;
   
-	const MAX_REPEAT_DEPTH = 3; // Максимальный уровень вложенности для REPEAT
+	self.variables = {};
+	self.procedures = {};
   
 	const executeBlock = (blockCommands) => {
-	  blockCommands.forEach((command) => {
-		if (typeof command === 'function') {
-		  command();
+	  blockCommands.forEach((commandOrBlock) => {
+		if (typeof commandOrBlock === 'function') {
+		  commandOrBlock(); // Выполнение условных блоков
 		} else {
-		  processCommand(command);
+		  self.executeCommand(commandOrBlock);
 		}
 	  });
 	};
   
-	const startRecordingCommands = () => {
-	  if (insideRepeat < MAX_REPEAT_DEPTH) {
-		insideRepeat++;
-		repeatCountStack.push(null); // Инициализируем место под количество повторений
-	  } else {
-		// Превышен максимальный уровень вложенности
-		program.error(`Превышен максимальный уровень вложенности REPEAT: ${MAX_REPEAT_DEPTH}`);
-	  }
-	};
-  
-	const endRecordingCommands = () => {
-	  const times = repeatCountStack.pop(); // Получаем количество повторений для текущего уровня
-	  if (times !== null) { // Проверяем, что это не заглушка, означающая пропуск блока из-за ограничения уровней
-		const commandsToRepeat = currentBlockCommands;
-		currentBlockCommands = []; 
-		insideRepeat--;
-		for (let i = 0; i < times; i++) {
-		  executeBlock(commandsToRepeat);
-		}
-	  }
-	};
-  
 	const processCommand = (line) => {
-	  if (line.toUpperCase().startsWith("REPEAT")) {
-		const repeatTimes = parseInt(line.split(/\s+/)[1], 10);
-		if (insideRepeat < MAX_REPEAT_DEPTH) {
-		  repeatCountStack[insideRepeat] = repeatTimes; // Задаём количество повторений для текущего уровня
-		}
-		startRecordingCommands();
-	  } else if (line.toUpperCase().includes("ENDREPEAT") && insideRepeat > 0) {
-		endRecordingCommands();
-	  } else if (insideRepeat > 0 && insideRepeat <= MAX_REPEAT_DEPTH) {
-		// Если мы внутри блока REPEAT, добавляем команду в стек
-		currentBlockCommands.push(line);
-	  } else if (line.toUpperCase().startsWith("IFBLOCK")) {
-		recordingIfBlock = true;
-		ifBlockConditionDirection = line.split(/\s+/)[1]; // Сохраняем направление для проверки
-	  } else if (recordingIfBlock && line.toUpperCase() !== "ENDIF") {
-		ifBlockCommands.push(line);
-	  } else if (line.toUpperCase() === "ENDIF") {
-		recordingIfBlock = false;
-	  } else if (line.toUpperCase().startsWith("PROCEDURE")) {
-		recordingProcedure = true;
-		procedureName = line.split(/\s+/)[1].toUpperCase();
-	  } else if (recordingProcedure) {
+	  if (recordingProcedure) {
 		if (line.toUpperCase() === "ENDPROC") {
 		  self.procedures[procedureName] = procedureCommands.slice();
 		  procedureCommands = [];
@@ -159,8 +112,54 @@ program.start = function (commandsText) {
 		} else {
 		  procedureCommands.push(line);
 		}
-	  } else if (insideRepeat === 0) {
-		self.executeCommand(line); // Непосредственное выполнение команды за пределами REPEAT
+	  } else if (recordingIfBlock) {
+		if (line.toUpperCase() === "ENDIF") {
+		  recordingIfBlock = false;
+		  const currentIfBlockCommands = ifBlockCommands.slice()
+		  const executeIfBlock = () => {
+			if (robot['on' + ifBlockConditionDirection.toUpperCase()]()) {
+			  executeBlock(currentIfBlockCommands);
+			}
+		  };
+		  if (repeatStack.length > 0) {
+			repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
+		  } else {
+			executeIfBlock();
+		  }
+		  ifBlockCommands = [];
+		} else {
+		  ifBlockCommands.push(line);
+		}
+	  } else if (line.toUpperCase().startsWith("REPEAT")) {
+		const parts = line.split(/\s+/);
+		const repeatValue = parseInt(parts[1], 10) || self.variables[parts[1].toUpperCase()] || 0;
+		repeatStack.push({ times: repeatValue, commands: [] });
+	  } else if (line.toUpperCase() === "ENDREPEAT") {
+		const repeatBlock = repeatStack.pop();
+		const executeRepeatBlock = () => {
+		  for (let i = 0; i < repeatBlock.times; i++) {
+			executeBlock(repeatBlock.commands);
+		  }
+		};
+		if (repeatStack.length > 0) {
+		  repeatStack[repeatStack.length - 1].commands.push(executeRepeatBlock);
+		} else {
+		  executeRepeatBlock();
+		}
+	  } else if (line.toUpperCase().startsWith("IFBLOCK")) {
+		recordingIfBlock = true;
+		ifBlockConditionDirection = line.split(/\s+/)[1];
+	  } else if (line.toUpperCase().startsWith("PROCEDURE")) {
+		recordingProcedure = true;
+		procedureCommands = [];
+		procedureName = line.split(/\s+/)[1].toUpperCase();
+	  } else {
+		// Добавляем команду в текущий блок REPEAT или выполняем немедленно
+		if (repeatStack.length > 0) {
+		  repeatStack[repeatStack.length - 1].commands.push(line);
+		} else {
+		  self.executeCommand(line);
+		}
 	  }
 	};
   
@@ -171,13 +170,4 @@ program.start = function (commandsText) {
 	  }
 	});
   };
-  
-  program.error = function (errorMessage) {
-	// Вывод сообщения об ошибке
-	console.error(errorMessage);
-  };
-  
-  
-  
-
   
