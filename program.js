@@ -80,7 +80,7 @@ program.error = function(errorMsg) {
 
 program.start = function(commandsText) {
 	const self = this;
-  
+	
 	const commands = commandsText.split('\n');
 	let repeatStack = [];
 	let recordingIfBlock = false;
@@ -89,6 +89,8 @@ program.start = function(commandsText) {
 	let procedureCommands = [];
 	let procedureName;
 	let ifBlockConditionDirection;
+	let insideIfBlock = false; 
+	let nestingLevel = 0;  
   
 	self.variables = {};
 	self.procedures = {};
@@ -96,7 +98,7 @@ program.start = function(commandsText) {
 	const executeBlock = (blockCommands) => {
 	  blockCommands.forEach((commandOrBlock) => {
 		if (typeof commandOrBlock === 'function') {
-		  commandOrBlock(); // Выполнение условных блоков
+		  commandOrBlock(); 
 		} else {
 		  self.executeCommand(commandOrBlock);
 		}
@@ -115,12 +117,15 @@ program.start = function(commandsText) {
 	  } else if (recordingIfBlock) {
 		if (line.toUpperCase() === "ENDIF") {
 		  recordingIfBlock = false;
-		  const currentIfBlockCommands = ifBlockCommands.slice()
+		  insideIfBlock = false; 
+		  nestingLevel--;  
+		  
 		  const executeIfBlock = () => {
 			if (robot['on' + ifBlockConditionDirection.toUpperCase()]()) {
-			  executeBlock(currentIfBlockCommands);
+			  executeBlock(ifBlockCommands.slice());
 			}
 		  };
+		  
 		  if (repeatStack.length > 0) {
 			repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
 		  } else {
@@ -131,31 +136,44 @@ program.start = function(commandsText) {
 		  ifBlockCommands.push(line);
 		}
 	  } else if (line.toUpperCase().startsWith("REPEAT")) {
-		const parts = line.split(/\s+/);
-		const repeatValue = parseInt(parts[1], 10) || self.variables[parts[1].toUpperCase()] || 0;
-		repeatStack.push({ times: repeatValue, commands: [] });
+		if (nestingLevel < 3) {  
+		  const parts = line.split(' ');
+		  const repeatValue = parseInt(parts[1], 10);
+		  repeatStack.push({ times: repeatValue, commands: [] });
+		  nestingLevel++;  
+		} else {
+		  console.error("Превышен максимальный уровень вложенности");
+		}
 	  } else if (line.toUpperCase() === "ENDREPEAT") {
 		const repeatBlock = repeatStack.pop();
+		nestingLevel--;  
+		
 		const executeRepeatBlock = () => {
 		  for (let i = 0; i < repeatBlock.times; i++) {
 			executeBlock(repeatBlock.commands);
 		  }
 		};
+		
 		if (repeatStack.length > 0) {
 		  repeatStack[repeatStack.length - 1].commands.push(executeRepeatBlock);
+		} else if (recordingIfBlock) {
+		  ifBlockCommands.push(executeRepeatBlock);
 		} else {
 		  executeRepeatBlock();
 		}
 	  } else if (line.toUpperCase().startsWith("IFBLOCK")) {
-		recordingIfBlock = true;
-		ifBlockConditionDirection = line.split(/\s+/)[1];
-	  } else if (line.toUpperCase().startsWith("PROCEDURE")) {
-		recordingProcedure = true;
-		procedureCommands = [];
-		procedureName = line.split(/\s+/)[1].toUpperCase();
+		if (nestingLevel < 3) {  
+		  recordingIfBlock = true;
+		  insideIfBlock = true;
+		  ifBlockConditionDirection = line.split(' ')[1];
+		  nestingLevel++;  
+		} else {
+		  console.error("Превышен максимальный уровень вложенности");
+		}
 	  } else {
-		// Добавляем команду в текущий блок REPEAT или выполняем немедленно
-		if (repeatStack.length > 0) {
+		if (recordingIfBlock) {
+		  ifBlockCommands.push(line);
+		} else if (repeatStack.length > 0) {
 		  repeatStack[repeatStack.length - 1].commands.push(line);
 		} else {
 		  self.executeCommand(line);
