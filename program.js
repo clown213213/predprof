@@ -26,7 +26,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	  };
 	
 	reader.readAsText(file);
-  };
+  })
   program.executeCommand = function(command) {
 	if (typeof command === 'function') {
 	  // Если команда представлена функцией, прямо её исполняем
@@ -87,6 +87,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	  }
 	  default:
 		alert(`Неизвестная или неподдерживаемая команда: ${instruction}.`);
+	}
   };
   
   program.error = function(errorMsg) {
@@ -94,6 +95,15 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		let event = new CustomEvent('error',{detail:errorMsg});
 		document.dispatchEvent(event);
   }
+
+  program.print = function() {
+  	let message = ''
+  	for (let i in arguments) message += arguments[i];
+  		let event = new CustomEvent('print', {detail:message});
+  	document.dispatchEvent(event)
+  }
+
+
   program.start = function(commandsText) {
 	const self = this;
 	
@@ -178,7 +188,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
       });
       if (!repeatStack.some(block => block.commands.includes("ENDREPEAT"))) {
       	alert('Нет соответствующей команды ENDREPEAT.');
-      }
+        }
     } else if (command === "ENDREPEAT") {
 		let repeatBlock = repeatStack.pop();
 	
@@ -200,6 +210,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		} else {
 		  // Если нет других вложенных структур, выполнить REPEAT сразу
 		  executeRepeatBlock();
+		}
 	  } else {
 		// добавление команд в текущий активный блок
 		if (ifBlockStack.length > 0) {
@@ -210,9 +221,12 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		  procedureCommands.push(line);
 		} else {
 		  self.executeCommand(line);
+		}
 	  }
 	};
   
 	commands.forEach(line => {
 	  processCommand(line.trim());
-	};
+	});
+  };
+  
