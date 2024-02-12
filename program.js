@@ -153,7 +153,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 						commands: []
 					});
 				} else {
-					alert("Maximum nesting level exceeded");
+					alert("Преувеличено максимальное количество вложенных конструкций.");
 				}
 			} else if (command === "ENDIF") {
 				if (ifBlockStack.length > 0) {
@@ -190,7 +190,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 						insideIfBlock: insideIfBlock
 					});
 				} else {
-					alert("Maximum nesting level exceeded");
+					alert("Преувеличено максимальное количество вложенных конструкций.");
 				}
 			} else if (command === "ENDREPEAT") {
 				let repeatBlock = repeatStack.pop();
@@ -233,13 +233,13 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		});
 		console.log(repeatStack)
 		if (ifBlockStack.length > 0) {
-			alert('Missing ENDIF for one or more IFBLOCK constructions');
+			alert('Нет соответствующей команды ENDIF');
 		} 
 		if (repeatStack.length > 0) {
-			alert('Missing ENDREPEAT for one or more REPEAT loops');
+			alert('Нет соответствующей команды ENDREPEAT');
 		}
 		if (recordingProcedure) {
-			alert('Missing ENDPROC for the last PROCEDURE block');
+			alert('Нет соответствующей команды ENDPROC');
 		}
 	}; 
   
