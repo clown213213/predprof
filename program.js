@@ -147,6 +147,9 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		  condition: args[0].toUpperCase(),
 		  commands: []
 		});
+		if (!repeatStack.some(block => block.commands.includes("ENDIF"))) {
+      	alert('Нет соответствующей команды ENDIF.');
+    }
 	} else if (command === "ENDIF") {
 		if (ifBlockStack.length > 0) {
 		  let ifBlock = ifBlockStack.pop();
