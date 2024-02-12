@@ -107,129 +107,129 @@ document.getElementById('loadButton').addEventListener('click', function() {
   program.start = function(commandsText) {
 	const self = this;
 	
-	const commands = commandsText.split('\n');
-	let repeatStack = [];
-	let recordingProcedure = false;
-	let procedureCommands = [];
-	let procedureName;
-	let ifBlockStack = []; // Стек для условных блоков
+	program.start = function(commandsText) {
+		const self = this;
+		
+		const commands = commandsText.split('\n');
+		let repeatStack = [];
+		let recordingProcedure = false;
+		let procedureCommands = [];
+		let procedureName;
+		let ifBlockStack = []; // Стек для условных блоков
+		
+		self.variables = {};
+		self.procedures = {};
+		
+		const executeBlock = (blockCommands) => {
+			for (let i = 0; i < blockCommands.length; i++) {
+				const commandOrBlock = blockCommands[i];
+				if (typeof commandOrBlock === 'function') {
+					commandOrBlock();
+				} else {
+					self.executeCommand(commandOrBlock);
+				}
+			}
+		};
+		
+		const processCommand = (line) => {
+			const commandParts = line.toUpperCase().split(' ');
+			const command = commandParts[0];
+			const args = commandParts.slice(1);
+			
+			if (command === "ENDPROC") {
+				if (recordingProcedure) {
+					self.procedures[procedureName] = procedureCommands.slice();
+					procedureCommands = [];
+					recordingProcedure = false;
+				}
+			} else if (command === "PROCEDURE") {
+				recordingProcedure = true;
+				procedureName = args[0];
+			} else if (command === "IFBLOCK") {
+				if (ifBlockStack.length < 3) {
+					ifBlockStack.push({
+						condition: args[0].toUpperCase(),
+						commands: []
+					});
+				} else {
+					console.error("Maximum if block nesting level exceeded");
+				}
+			} else if (command === "ENDIF") {
+				if (ifBlockStack.length > 0) {
+					let ifBlock = ifBlockStack.pop();
+					
+					const executeIfBlock = () => {
+						if (robot['on' + ifBlock.condition]()) {
+							executeBlock(ifBlock.commands);
+						}
+					};
 	
-	self.variables = {};
-	self.procedures = {};
+					// Добавить исполнение блока условия либо в стек повторений, процедуру или выполнить сразу
+					if (repeatStack.length > 0) {
+						repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
+					} else if (recordingProcedure) {
+						procedureCommands.push(executeIfBlock);
+					} else {
+						executeIfBlock();
+					}
+				}
+			} else if (command === "REPEAT") {
+				let repeatTimes = isNaN(Number(args[0])) ? parseInt(self.variables[args[0]], 10) : parseInt(args[0], 10);
+				let insideIfBlock = ifBlockStack.length > 0;
 	
-	const executeBlock = (blockCommands) => {
-		for (let i = 0; i < blockCommands.length; i++) {
-			const commandOrBlock = blockCommands[i];
-			if (typeof commandOrBlock === 'function') {
-			  commandOrBlock();
+				if (repeatStack.length < 3) {
+					repeatStack.push({
+						times: repeatTimes,
+						commands: [],
+						execute: () => {
+							for (let i = 0; i < repeatBlock.times; i++) {
+								executeBlock(repeatBlock.commands);
+							}
+						},
+						insideIfBlock: insideIfBlock
+					});
+				} else {
+					console.error("Maximum repeat block nesting level exceeded");
+				}
+			} else if (command === "ENDREPEAT") {
+				let repeatBlock = repeatStack.pop();
+	
+				const executeRepeatBlock = () => {
+					for (let i = 0; i < repeatBlock.times; i++) {
+						executeBlock(repeatBlock.commands);
+					}
+				};
+	
+				if (repeatBlock.insideIfBlock) {
+					// Если REPEAT был внутри IFBLOCK, добавить executeRepeatBlock в последний IFBLOCK
+					ifBlockStack[ifBlockStack.length - 1].commands.push(executeRepeatBlock);
+				} else if (repeatStack.length > 0) {
+					// Если текущий REPEAT вложен в другой REPEAT
+					repeatStack[repeatStack.length - 1].commands.push(executeRepeatBlock);
+				} else if (recordingProcedure) {
+					// Если REPEAT накапливается для процедуры
+					procedureCommands.push(executeRepeatBlock);
+				} else {
+					// Если нет других вложенных структур, выполнить REPEAT сразу
+					executeRepeatBlock();
+				}
 			} else {
-			  self.executeCommand(commandOrBlock);
+				// добавление команд в текущий активный блок
+				if (ifBlockStack.length > 0) {
+					ifBlockStack[ifBlockStack.length - 1].commands.push(line);
+				} else if (repeatStack.length > 0) {
+					repeatStack[repeatStack.length - 1].commands.push(line);
+				} else if (recordingProcedure) {
+					procedureCommands.push(line);
+				} else {
+					self.executeCommand(line);
+				}
 			}
-		  }
 		};
-	
-	const processCommand = (line) => {
-	  const commandParts = line.toUpperCase().split(' ');
-	  const command = commandParts[0];
-	  const args = commandParts.slice(1);
 	  
-	  if (command === "ENDPROC") {
-		if (recordingProcedure) {
-		  self.procedures[procedureName] = procedureCommands.slice();
-		  procedureCommands = [];
-		  recordingProcedure = false;
-		}
-	  } else if (command === "PROCEDURE") {
-		recordingProcedure = true;
-		procedureName = args[0];
-	  } else if (command === "IFBLOCK") {
-		ifBlockStack.push({
-		  condition: args[0].toUpperCase(),
-		  commands: []
+		commands.forEach(line => {
+			processCommand(line.trim());
 		});
-		if (!repeatStack.some(block => block.commands.includes("ENDIF"))) {
-      	alert('Нет соответствующей команды ENDIF.');
-    }
-	} else if (command === "ENDIF") {
-		if (ifBlockStack.length > 0) {
-		  let ifBlock = ifBlockStack.pop();
-		  
-		  const executeIfBlock = () => {
-			if (robot['on' + ifBlock.condition]()) {
-			  executeBlock(ifBlock.commands);
-			}
-		  };
-	
-		  // Добавить исполнение блока условия либо в стек повторений, процедуру или выполнить сразу
-		  if (repeatStack.length > 0) {
-			repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
-		  } else if (recordingProcedure) {
-			procedureCommands.push(executeIfBlock);
-		  } else {
-			executeIfBlock();
-		  }
-		}
-	
-		// ... [код обработки других команд]
-	
-	  } else if (command === "REPEAT") {
-		let repeatTimes = isNaN(Number(args[0])) ? parseInt(self.variables[args[0]], 10) : parseInt(args[0], 10);
-      if (repeatTimes < 0 || repeatTimes === 0) {
-      	alert('Недопустимое значение повторений цикла. Введите положительное число.')
-      }
-      let insideIfBlock = ifBlockStack.length > 0;
-      
-      repeatStack.push({
-        times: repeatTimes,
-        commands: [],
-        execute: () => {
-          for (let i = 0; i < repeatBlock.times; i++) {
-            executeBlock(repeatBlock.commands);
-          }
-        },
-        insideIfBlock: insideIfBlock
-      });
-      if (!repeatStack.some(block => block.commands.includes("ENDREPEAT"))) {
-      	alert('Нет соответствующей команды ENDREPEAT.');
-        }
-    } else if (command === "ENDREPEAT") {
-		let repeatBlock = repeatStack.pop();
-	
-		const executeRepeatBlock = () => {
-		  for (let i = 0; i < repeatBlock.times; i++) {
-			executeBlock(repeatBlock.commands);
-		  }
-		};
-	
-		if (repeatBlock.insideIfBlock) {
-		  // Если REPEAT был внутри IFBLOCK, добавить executeRepeatBlock в последний IFBLOCK
-		  ifBlockStack[ifBlockStack.length - 1].commands.push(executeRepeatBlock);
-		} else if (repeatStack.length > 0) {
-		  // Если текущий REPEAT вложен в другой REPEAT
-		  repeatStack[repeatStack.length - 1].commands.push(executeRepeatBlock);
-		} else if (recordingProcedure) {
-		  // Если REPEAT накапливается для процедуры
-		  procedureCommands.push(executeRepeatBlock);
-		} else {
-		  // Если нет других вложенных структур, выполнить REPEAT сразу
-		  executeRepeatBlock();
-		}
-	  } else {
-		// добавление команд в текущий активный блок
-		if (ifBlockStack.length > 0) {
-		  ifBlockStack[ifBlockStack.length - 1].commands.push(line);
-		} else if (repeatStack.length > 0) {
-		  repeatStack[repeatStack.length - 1].commands.push(line);
-		} else if (recordingProcedure) {
-		  procedureCommands.push(line);
-		} else {
-		  self.executeCommand(line);
-		}
-	  }
-	};
-  
-	commands.forEach(line => {
-	  processCommand(line.trim());
-	});
-  };
+	}
+};
   
