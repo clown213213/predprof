@@ -90,7 +90,7 @@ robot.draw = function (move) {
 
     for (let i in robot.walls) {
         let wall = robot.walls[i];
-        ctx.fillStyle = (wall.isActive || wall.isHover) ? '#FFD54F' : '#4CAF50';   /* #4C64AF */
+        ctx.fillStyle = (wall.isActive) ? '#FFD54F' : '#4CAF50';   /* #4C64AF */
         ctx.fillRect(wall.LEFT, wall.UP, wall.width, wall.height);
     }
 
@@ -117,56 +117,92 @@ robot.canvas.addEventListener('touchstart', function(e) {
 },true)
 robot.canvas.addEventListener('touchend', function (e) {clearTimeout(robot.delay)});
 robot.canvas.addEventListener('touchmove', function (e) {clearTimeout(robot.delay)});
+let stopMoving = false
+startMoving = function(){
+    stopMoving = false
+}
+stopRobot = function(){
+    stopMoving = true
+}
 
 
 robot.moveRobot = function (x, y) {
     if (x != 0 && x > 0) {
-        for(let k = 0; (k != x) && (robot.x < robot.HCELLS - 1); k++) {
-            robot.x += 1;
-            robot.draw(true);
+        for(let k = 0; (k != x); k++) {
+            if (robot.x < robot.HCELLS - 1) {
+                robot.x += 1;
+                robot.draw(true);
+            } else {
+                robot.fail()
+                break
+            }
         }
     }
-    if (x != 0 && x < 0) {
-        for(let k = 0; (k != x)  && (robot.x > 0); k--) {
-            robot.x -= 1;
-            robot.draw(true);
+    if (x != 0 && -x > 0) {
+        for(let k = 0; (k != x); k--) {
+            if (robot.x > 0) {
+                robot.x -= 1;
+                robot.draw(true);
+            } else {
+                robot.fail()
+                break
+            }
         }
     }
     if (y != 0 && y > 0) {
-        for(let k = 0; (k != y)  && (robot.y < robot.HCELLS - 1); k++) {
-            robot.y += 1;
-            robot.draw(true);
+        for(let k = 0; (k != y); k++) {
+            if (robot.y < robot.HCELLS - 1) {
+                robot.y += 1;
+                robot.draw(true);
+            } else {
+                robot.fail()
+                break
+            }
         }
     }
-    if (y != 0 && y < 0) {
-        for(let k = 0; (k != y) && (robot.y > 0); k--) {
-            robot.y -= 1;
-            robot.draw(true);
+    if (y != 0 && -y > 0) {
+        for(let k = 0; (k != y); k--) {
+            if (robot.y > 0) {
+                robot.y -= 1;
+                robot.draw(true);
+            } else {
+                robot.fail()
+                break
+            }
         }
     }
+    console.log(stopMoving)
 }
 robot.isFill = function (fill) {
     return robot.cells[robot.y + '_' + robot.x].isFill == fill;
 }
 
-robot.onRIGHT = function (wall) {
+robot.onRIGHT = function () {
     if (robot.x == robot.HCELLS - 1) {
         return  true;
+    } else {
+        return false;
     }
 }
-robot.onLEFT = function (wall) {
+robot.onLEFT = function () {
     if (robot.x == 0) {
         return  true;
+    } else {
+        return false;
     }
 }
-robot.onUP = function (wall) {
+robot.onUP = function () {
     if (robot.y == 0) {
         return  true;
+    } else {
+        return false;
     }
 }
-robot.onDOWN = function (wall) {
+robot.onDOWN= function () {
     if (robot.y == robot.VCELLS - 1) {
         return  true;
+    } else {
+        return false;
     }
 }
 
@@ -187,12 +223,16 @@ robot.down = function (n) {
     robot.moveRobot(0, n);
 }
 
-/* robot.fail = function () {
+let k = false
+
+robot.fail = function () {
+    let k = true
     robot.cells[robot.y + '_' + robot.x].isFail = true;
     robot.draw(true);
-    throw 'collision';
+    alert('Столкновение с препятствием!')
+    throw 'collision'
 }
-*/
+
 robot.clean = function () {
     for (let i in robot.cells) {
         robot.cells[i].isFill = false;
@@ -206,17 +246,13 @@ robot.parseCommand = function (commands) {
     robot.x = robot.startPos.x;
     robot.y = robot.startPos.y;
     robot.moveRobot(0,0);
-    let jsCommand = '';
-    if (commands) {
-        commands.split('\n').forEach(function (command) {
-            command = command.replace(/\sRIGHT (.+)/g , ' robot.right ($1)');
-            command = command.replace(/\sLEFT (.+)/g, ' robot.left ($1)');
-            command = command.replace(/\sUP (.+)/g, ' robot.up ($1)');
-            command = command.replace(/\sDOWN (.+)/g, ' robot.down ($1)');
-
-            jsCommand += command + '\n';
-        });
-        commands = jsCommand;
+    
+    if (typeof stopMoving !== 'undefined' && stopMoving) {
+        return;
     }
-    return commands;
+    
+    if (!commands) {
+        return;
+    }
 }
+
