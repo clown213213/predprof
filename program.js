@@ -107,14 +107,15 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	self.procedures = {};
 	
 	const executeBlock = (blockCommands) => {
-	  blockCommands.forEach(commandOrBlock => {
-		if (typeof commandOrBlock === 'function') {
-		  commandOrBlock();
-		} else {
-		  self.executeCommand(commandOrBlock);
-		}
-	  });
-	};
+		for (let i = 0; i < blockCommands.length; i++) {
+			const commandOrBlock = blockCommands[i];
+			if (typeof commandOrBlock === 'function') {
+			  commandOrBlock();
+			} else {
+			  self.executeCommand(commandOrBlock);
+			}
+		  }
+		};
 	
 	const processCommand = (line) => {
 	  const commandParts = line.toUpperCase().split(' ');
@@ -132,19 +133,20 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		procedureName = args[0];
 	  } else if (command === "IFBLOCK") {
 		ifBlockStack.push({
-		  condition: args[0].toUpperCase(), // Normalize the direction
+		  condition: args[0].toUpperCase(),
 		  commands: []
 		});
-	  } else if (command === "ENDIF") {
+	} else if (command === "ENDIF") {
 		if (ifBlockStack.length > 0) {
 		  let ifBlock = ifBlockStack.pop();
 		  
 		  const executeIfBlock = () => {
 			if (robot['on' + ifBlock.condition]()) {
-				executeBlock(ifBlock.commands);
-			  }
+			  executeBlock(ifBlock.commands);
+			}
 		  };
-		  
+	
+		  // Добавить исполнение блока условия либо в стек повторений, процедуру или выполнить сразу
 		  if (repeatStack.length > 0) {
 			repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
 		  } else if (recordingProcedure) {
@@ -153,26 +155,48 @@ document.getElementById('loadButton').addEventListener('click', function() {
 			executeIfBlock();
 		  }
 		}
+	
+		// ... [код обработки других команд]
+	
 	  } else if (command === "REPEAT") {
 		let repeatTimes = isNaN(Number(args[0])) ? parseInt(self.variables[args[0]], 10) : parseInt(args[0], 10);
-		repeatStack.push({ times: repeatTimes, commands: [] });
-	  } else if (command === "ENDREPEAT") {
-		const repeatBlock = repeatStack.pop();
-  
+      let insideIfBlock = ifBlockStack.length > 0;
+      
+      repeatStack.push({
+        times: repeatTimes,
+        commands: [],
+        execute: () => {
+          for (let i = 0; i < repeatBlock.times; i++) {
+            executeBlock(repeatBlock.commands);
+          }
+        },
+        insideIfBlock: insideIfBlock
+      });
+
+    } else if (command === "ENDREPEAT") {
+		let repeatBlock = repeatStack.pop();
+	
 		const executeRepeatBlock = () => {
 		  for (let i = 0; i < repeatBlock.times; i++) {
 			executeBlock(repeatBlock.commands);
 		  }
 		};
-  
-		if (repeatStack.length > 0) {
+	
+		if (repeatBlock.insideIfBlock) {
+		  // Если REPEAT был внутри IFBLOCK, добавить executeRepeatBlock в последний IFBLOCK
+		  ifBlockStack[ifBlockStack.length - 1].commands.push(executeRepeatBlock);
+		} else if (repeatStack.length > 0) {
+		  // Если текущий REPEAT вложен в другой REPEAT
 		  repeatStack[repeatStack.length - 1].commands.push(executeRepeatBlock);
-		} else if(recordingProcedure) {
+		} else if (recordingProcedure) {
+		  // Если REPEAT накапливается для процедуры
 		  procedureCommands.push(executeRepeatBlock);
 		} else {
+		  // Если нет других вложенных структур, выполнить REPEAT сразу
 		  executeRepeatBlock();
 		}
 	  } else {
+		// добавление команд в текущий активный блок
 		if (ifBlockStack.length > 0) {
 		  ifBlockStack[ifBlockStack.length - 1].commands.push(line);
 		} else if (repeatStack.length > 0) {
@@ -184,7 +208,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		}
 	  }
 	};
-	
+  
 	commands.forEach(line => {
 	  processCommand(line.trim());
 	});
