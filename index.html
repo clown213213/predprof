@@ -24,7 +24,7 @@
 		<div class="messages">
 			<textarea id='output' disabled = 'true'></textarea>
 				<input type='button' value='Run' id='button'>
-				<input type='button' value='Stop' id='button2'>
+				<input type='button' value='Stop' id='stopButton'>
 			<div id='error'></div>
 		</div>
 
@@ -38,6 +38,7 @@
 	input = document.getElementById('input');
 	output = document.getElementById('output');
 	button = document.getElementById('button');
+	stopButton = document.getElementById('stopButton');
 	robotBoard = document.getElementById('robotBoard');
 	startHighlight('input');
 	if (robot) robot.create(robotBoard);
@@ -49,11 +50,17 @@
 	});
 	
 	button.onclick = function() {
+		robot.clean()
 		output.value = '';
 		error.style.display = 'none';
 		program.start(input.value);
+
 	}
-	
+	stopButton.onclick = function(){
+		robot.x = robot.startPos.x;
+    	robot.y = robot.startPos.y;
+		console.log('Кнопка нажата')
+	}
 	/*let abort = true
 
 	button2.onclick = function(abort) {
@@ -62,3 +69,4 @@
 </script>
 </body>
 </html>
+

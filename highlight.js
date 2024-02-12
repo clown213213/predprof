@@ -61,3 +61,4 @@ function getStyle(el, cssprop) {
 		else
 			return el.style[cssprop];
 }
+

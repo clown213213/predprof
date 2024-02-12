@@ -43,23 +43,11 @@ textarea {
     font-size:2.3em;
 }
 
-.messages #button2 {
+.messages #stopButton {
     position: absolute;
     top:0;
     right:0;
     font-size:2.3em;
-}
-
-.messages #error {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding:10px;
-    background-color: Red;
-    color: Black;
-    font-weight: 600;
-    display: none;
 }
 
 .canvas {
