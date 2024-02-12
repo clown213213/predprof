@@ -17,69 +17,202 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	var reader = new FileReader();
 	
 	reader.onload = function(e) {
-	  try {
-		var commands = e.target.result;
-		program.start(commands);
-	  } catch(err) {
-		program.error("Ошибка при загрузке файла: " + err.message);
-	  }
-	};
-	
-	reader.onerror = function(e) {
-	  program.error("Не удалось прочитать файл: " + e.target.error);
-	};
+		try {
+		  var commands = e.target.result;
+		  program.start(commands); // Здесь 'this' будет ссылаться на 'program', если 'start' вызывается корректно
+		} catch(err) {
+		  program.error("Ошибка при загрузке файла: " + err.message); // 'error' должен быть методом 'program'
+		}
+	  };
 	
 	reader.readAsText(file);
-  });
-
-program.start = function(commands) {
-	
-	let substring=commands.match(/'[^']*'|"[^"]*"/g);
-	for (let i in substring) commands = commands.replace(substring[i],'$_'+i);
-	
-	commands = ' ' + commands.replace(/\n/g,' \n ') + ' ';
-	commands = commands.replace(/\(/g,' ( ').replace(/\)/g,') ');
-	robot.tick = 0;
-	if (robot) commands = robot.parseCommand(commands);
-
-	commands = program.parseCommand(commands);
-	console.log(commands)
-	for (let i in substring) commands = commands.replace('$_'+i,substring[i]);
-
-	console.log(commands)
-
-	try {
-		eval('try{'+commands+'}catch(e){if(e=="collision") pro.error("Столкновение с препятствием!"); else program.error("Ошибка в строке "+e.stack.match(/<anonymous>:(\\d+):/)[1]+"!");}');
+  };
+  program.executeCommand = function(command) {
+	if (typeof command === 'function') {
+	  // Если команда представлена функцией, прямо её исполняем
+	  command();
+	  return;
 	}
-	catch(e) {program.error('Ошибка синтаксиса!');}
-}
-
-program.parseCommand = function(commands) {
-
-	let jsCommand ='';
+  
+	let [instruction, ...args] = command.trim().split(/\s+/);
+	instruction = instruction.toUpperCase();
+	console.log('Выполняется команда:', command);
+  
+	switch (instruction) {
+	  case 'RIGHT':
+	  case 'LEFT':
+	  case 'UP':
+	  case 'DOWN': {
+		// Используйте isNaN(Number()) для надежной проверки, является ли args[0] числом или переменной
+		const steps = isNaN(Number(args[0])) ? this.variables[args[0]] : parseInt(args[0], 10);
+		if (steps < 0 || steps > 20) {
+			alert(`Недопустимое значение шага. Введите значение от 0 до 20.`)
+			break
+		}
+		if (typeof robot[instruction.toLowerCase()] === 'function') {
+		  robot[instruction.toLowerCase()](steps);
+		}
+		break;
+	  }
+	  case 'SET': 
+	  if (args.length === 3 && args[1] === "=") {
+		let variableName = args[0];
+		let value = args[2]; // Имя переменной или числовое значение.
+		
+		// Пытаемся получить значение переменной из текущего контекста:
+		if (!isNaN(Number(value))) {
+		  // Если 'value' - это число, преобразуем его в число:
+		  this.variables[variableName] = parseInt(value, 10);
+		} else if (this.variables.hasOwnProperty(value)) {
+		  // Если 'value' - это имя другой переменной, получаем её значение:
+		  this.variables[variableName] = this.variables[value];
+		} else {
+		  // Если 'value' не может быть разрешено, выводим ошибку:
+		  alert(`Переменная ${value} не определена.`);
+		}
+	  } else {
+		alert("Неверный формат команды SET. Используйте: SET <имя_переменной> = <значение>.");
+	  }
+	  break;
+	  case 'CALL': {
+		let procedureName = args[0].toUpperCase();
+		if (this.procedures.hasOwnProperty(procedureName)) {
+		  // Выполнить каждую команду в процедуре
+		  const procedureCommands = this.procedures[procedureName];
+		  procedureCommands.forEach(cmd => this.executeCommand(cmd));
+		} else {
+		  alert(`Процедура ${procedureName} не определена.`);
+		}
+		break;
+	  }
+	  default:
+		alert(`Неизвестная или неподдерживаемая команда: ${instruction}.`);
+  };
+  
+  program.error = function(errorMsg) {
+		console.error('Ошибка:', errorMsg);
+		let event = new CustomEvent('error',{detail:errorMsg});
+		document.dispatchEvent(event);
+  }
+  program.start = function(commandsText) {
+	const self = this;
 	
-	commands.split('\n').forEach(function(command) {
-				if(/\sPROCEDURE\s/.test(command)) command = program.parseFunction(command);
-		command = command.replace(/\sIFBLOCK (.+)/g ,'if (robot.on$1()){')
-		.replace(/\sENDIF\s/g,' } ')
-		.replace(/\sREPEAT (.+)/g,'for(i=1;i<=($1);i++){')
-		.replace(/\sENDREPEAT\s/g,' } ')
-		.replace(/\sENDPROC\s/g,' }; ')
-		.replace(/\sCALL\s(.+)/g,' $1();')
-		.replace(/\sSET (.+) =/g,' var $1 =')
-		
-		
-		jsCommand+=command+'\n';
-	});
-	return jsCommand;
-}
-
-program.parseFunction = function(command) {
-	return command.replace(/PROCEDURE\s+$/g,'')
-				.replace(/PROCEDURE\s(.+)/g,'function $1 (){')
-}
-
-program.error = function(errorMsg) {
-	let event = new CustomEvent('error',{detail:errorMsg});
-	document.dispatchEvent(event);
-}
+	const commands = commandsText.split('\n');
+	let repeatStack = [];
+	let recordingProcedure = false;
+	let procedureCommands = [];
+	let procedureName;
+	let ifBlockStack = []; // Стек для условных блоков
+	
+	self.variables = {};
+	self.procedures = {};
+	
+	const executeBlock = (blockCommands) => {
+		for (let i = 0; i < blockCommands.length; i++) {
+			const commandOrBlock = blockCommands[i];
+			if (typeof commandOrBlock === 'function') {
+			  commandOrBlock();
+			} else {
+			  self.executeCommand(commandOrBlock);
+			}
+		  }
+		};
+	
+	const processCommand = (line) => {
+	  const commandParts = line.toUpperCase().split(' ');
+	  const command = commandParts[0];
+	  const args = commandParts.slice(1);
+	  
+	  if (command === "ENDPROC") {
+		if (recordingProcedure) {
+		  self.procedures[procedureName] = procedureCommands.slice();
+		  procedureCommands = [];
+		  recordingProcedure = false;
+		}
+	  } else if (command === "PROCEDURE") {
+		recordingProcedure = true;
+		procedureName = args[0];
+	  } else if (command === "IFBLOCK") {
+		ifBlockStack.push({
+		  condition: args[0].toUpperCase(),
+		  commands: []
+		});
+	} else if (command === "ENDIF") {
+		if (ifBlockStack.length > 0) {
+		  let ifBlock = ifBlockStack.pop();
+		  
+		  const executeIfBlock = () => {
+			if (robot['on' + ifBlock.condition]()) {
+			  executeBlock(ifBlock.commands);
+			}
+		  };
+	
+		  // Добавить исполнение блока условия либо в стек повторений, процедуру или выполнить сразу
+		  if (repeatStack.length > 0) {
+			repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
+		  } else if (recordingProcedure) {
+			procedureCommands.push(executeIfBlock);
+		  } else {
+			executeIfBlock();
+		  }
+		}
+	
+		// ... [код обработки других команд]
+	
+	  } else if (command === "REPEAT") {
+		let repeatTimes = isNaN(Number(args[0])) ? parseInt(self.variables[args[0]], 10) : parseInt(args[0], 10);
+      if (repeatTimes < 0 || repeatTimes === 0) {
+      	alert('Недопустимое значение повторений цикла. Введите положительное число.')
+      }
+      let insideIfBlock = ifBlockStack.length > 0;
+      
+      repeatStack.push({
+        times: repeatTimes,
+        commands: [],
+        execute: () => {
+          for (let i = 0; i < repeatBlock.times; i++) {
+            executeBlock(repeatBlock.commands);
+          }
+        },
+        insideIfBlock: insideIfBlock
+      });
+      if (!repeatStack.some(block => block.commands.includes("ENDREPEAT"))) {
+      	alert('Нет соответствующей команды ENDREPEAT.');
+      }
+    } else if (command === "ENDREPEAT") {
+		let repeatBlock = repeatStack.pop();
+	
+		const executeRepeatBlock = () => {
+		  for (let i = 0; i < repeatBlock.times; i++) {
+			executeBlock(repeatBlock.commands);
+		  }
+		};
+	
+		if (repeatBlock.insideIfBlock) {
+		  // Если REPEAT был внутри IFBLOCK, добавить executeRepeatBlock в последний IFBLOCK
+		  ifBlockStack[ifBlockStack.length - 1].commands.push(executeRepeatBlock);
+		} else if (repeatStack.length > 0) {
+		  // Если текущий REPEAT вложен в другой REPEAT
+		  repeatStack[repeatStack.length - 1].commands.push(executeRepeatBlock);
+		} else if (recordingProcedure) {
+		  // Если REPEAT накапливается для процедуры
+		  procedureCommands.push(executeRepeatBlock);
+		} else {
+		  // Если нет других вложенных структур, выполнить REPEAT сразу
+		  executeRepeatBlock();
+	  } else {
+		// добавление команд в текущий активный блок
+		if (ifBlockStack.length > 0) {
+		  ifBlockStack[ifBlockStack.length - 1].commands.push(line);
+		} else if (repeatStack.length > 0) {
+		  repeatStack[repeatStack.length - 1].commands.push(line);
+		} else if (recordingProcedure) {
+		  procedureCommands.push(line);
+		} else {
+		  self.executeCommand(line);
+	  }
+	};
+  
+	commands.forEach(line => {
+	  processCommand(line.trim());
+	};
