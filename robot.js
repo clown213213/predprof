@@ -255,4 +255,3 @@ robot.parseCommand = function (commands) {
         return;
     }
 }
-
