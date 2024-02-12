@@ -28,6 +28,12 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	reader.readAsText(file);
   })
   program.executeCommand = function(command) {
+	if (typeof command === 'function') {
+	  // Если команда представлена функцией, прямо её исполняем
+	  command();
+	  return;
+	}
+  
 	let [instruction, ...args] = command.trim().split(/\s+/);
 	instruction = instruction.toUpperCase();
 	console.log('Выполняется команда:', command);
@@ -37,7 +43,8 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	  case 'LEFT':
 	  case 'UP':
 	  case 'DOWN': {
-		const steps = isNaN(parseInt(args[0], 10)) ? this.variables[args[0]] : parseInt(args[0], 10);
+		// Используйте isNaN(Number()) для надежной проверки, является ли args[0] числом или переменной
+		const steps = isNaN(Number(args[0])) ? this.variables[args[0]] : parseInt(args[0], 10);
 		if (typeof robot[instruction.toLowerCase()] === 'function') {
 		  robot[instruction.toLowerCase()](steps);
 		} else {
@@ -48,10 +55,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 	  case 'SET': {
 		if (args.length === 3 && args[1] === "=") {
 		  let variableName = args[0];
-		  let value = isNaN(parseInt(args[2], 10)) ? this.variables[args[2]] : parseInt(args[2], 10);
-		  if (this.variables === undefined) {
-			this.variables = {};
-		  }
+		  let value = isNaN(Number(args[2])) ? this.variables[args[2]] : parseInt(args[2], 10);
 		  this.variables[variableName] = value;
 		} else {
 		  this.error("Неверный формат команды SET. Используйте: SET <имя_переменной> = <значение>.");
@@ -63,19 +67,20 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		if (this.procedures.hasOwnProperty(procedureName)) {
 		  // Выполнить каждую команду в процедуре
 		  const procedureCommands = this.procedures[procedureName];
-		  for (const procedureCommand of procedureCommands) {
-			this.executeCommand(procedureCommand); // Используйте функцию executeCommand для выполнения команды
-		  }
+		  procedureCommands.forEach(cmd => this.executeCommand(cmd));
 		} else {
 		  this.error(`Процедура ${procedureName} не определена.`);
 		}
 		break;
 	  }
-}
-program.error = function(errorMsg) {
+	  default:
+		this.error(`Неизвестная или неподдерживаемая команда: ${instruction}.`);
+	}
+  };
+  
+  program.error = function(errorMsg) {
 	console.error('Ошибка:', errorMsg);
   };
-}
 
 
 program.start = function(commandsText) {
@@ -83,106 +88,94 @@ program.start = function(commandsText) {
 	
 	const commands = commandsText.split('\n');
 	let repeatStack = [];
-	let recordingIfBlock = false;
-	let ifBlockCommands = [];
 	let recordingProcedure = false;
+	let recordingIfBlock = false;
 	let procedureCommands = [];
+	let ifBlockCommands = [];
 	let procedureName;
 	let ifBlockConditionDirection;
-	let insideIfBlock = false; 
-	let nestingLevel = 0;  
-  
+	let nestingLevel = 0;
+	
 	self.variables = {};
 	self.procedures = {};
   
 	const executeBlock = (blockCommands) => {
-	  blockCommands.forEach((commandOrBlock) => {
+	  blockCommands.forEach(commandOrBlock => {
 		if (typeof commandOrBlock === 'function') {
-		  commandOrBlock(); 
+		  commandOrBlock();
 		} else {
 		  self.executeCommand(commandOrBlock);
 		}
 	  });
 	};
+	
+	const createAndExecuteRepeatBlock = (repeatBlock) => {
+	  const commands = repeatBlock.commands;
+	  const executeRepeatBlock = () => {
+		for (let i = 0; i < repeatBlock.times; i++) {
+		  executeBlock(commands);
+		}
+	  };
+  
+	  if (recordingProcedure) {
+		procedureCommands.push(executeRepeatBlock);
+	  } else {
+		executeRepeatBlock();
+	  }
+	};
   
 	const processCommand = (line) => {
-	  if (recordingProcedure) {
-		if (line.toUpperCase() === "ENDPROC") {
-		  self.procedures[procedureName] = procedureCommands.slice();
+	  if (line.toUpperCase() === "ENDPROC") {
+		if (recordingProcedure) {
+		  self.procedures[procedureName] = [...procedureCommands];
 		  procedureCommands = [];
 		  recordingProcedure = false;
-		} else {
-		  procedureCommands.push(line);
 		}
-	  } else if (recordingIfBlock) {
-		if (line.toUpperCase() === "ENDIF") {
+	  } else if (line.toUpperCase().startsWith("PROCEDURE")) {
+		recordingProcedure = true;
+		procedureName = line.split(/\s+/)[1].toUpperCase();
+	  } else if (line.toUpperCase().startsWith("IFBLOCK")) {
+		recordingIfBlock = true;
+		ifBlockConditionDirection = line.split(' ')[1];
+	  } else if (line.toUpperCase() === "ENDIF") {
+		if (recordingIfBlock) {
 		  recordingIfBlock = false;
-		  insideIfBlock = false; 
-		  const currentIfBlockCommands = ifBlockCommands.slice()
-		  nestingLevel--;  
-		  
+		  const conditionDirection = ifBlockConditionDirection;
+		  const ifCommands = [...ifBlockCommands];
+		  ifBlockCommands = [];
+	
 		  const executeIfBlock = () => {
-			if (robot['on' + ifBlockConditionDirection.toUpperCase()]()) {
-			  executeBlock(currentIfBlockCommands);
+			if (typeof robot['on' + conditionDirection.toUpperCase()]()) {
+			  executeBlock(ifCommands);
 			}
 		  };
-		  
-		  if (repeatStack.length > 0) {
-			repeatStack[repeatStack.length - 1].commands.push(executeIfBlock);
-		  } else {
+  
+		  if (recordingProcedure) {
+			procedureCommands.push(executeIfBlock);
+		  } else{
 			executeIfBlock();
 		  }
-		  ifBlockCommands = [];
-		} else {
-		  ifBlockCommands.push(line);
 		}
 	  } else if (line.toUpperCase().startsWith("REPEAT")) {
-		if (nestingLevel < 3) {  
-		  const parts = line.split(' ');
-		  const repeatValue = parseInt(parts[1], 10);
-		  repeatStack.push({ times: repeatValue, commands: [] });
-		  nestingLevel++;  
-		} else {
-		  console.error("Превышен максимальный уровень вложенности");
-		}
+		const times = parseInt(line.split(' ')[1], 10);
+		repeatStack.push({ times: times, commands: [] });
 	  } else if (line.toUpperCase() === "ENDREPEAT") {
 		const repeatBlock = repeatStack.pop();
-		nestingLevel--;  
-		
-		const executeRepeatBlock = () => {
-		  for (let i = 0; i < repeatBlock.times; i++) {
-			executeBlock(repeatBlock.commands);
-		  }
-		};
-		
-		if (repeatStack.length > 0) {
-		  repeatStack[repeatStack.length - 1].commands.push(executeRepeatBlock);
-		} else if (recordingIfBlock) {
-		  ifBlockCommands.push(executeRepeatBlock);
-		} else {
-		  executeRepeatBlock();
-		}
-	  } else if (line.toUpperCase().startsWith("IFBLOCK")) {
-		if (nestingLevel < 3) {  
-		  recordingIfBlock = true;
-		  insideIfBlock = true;
-		  ifBlockConditionDirection = line.split(' ')[1];
-		  nestingLevel++;  
-		} else {
-		  console.error("Превышен максимальный уровень вложенности");
-		}
+		createAndExecuteRepeatBlock(repeatBlock);
 	  } else {
 		if (recordingIfBlock) {
 		  ifBlockCommands.push(line);
 		} else if (repeatStack.length > 0) {
 		  repeatStack[repeatStack.length - 1].commands.push(line);
+		} else if (recordingProcedure) {
+		  procedureCommands.push(line);
 		} else {
 		  self.executeCommand(line);
 		}
 	  }
 	};
-  
-	commands.forEach((line) => {
+	
+	commands.forEach(line => {
 	  const trimmedLine = line.trim();
 	  if (trimmedLine) {
 		processCommand(trimmedLine);
