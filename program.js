@@ -20,6 +20,10 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		try {
 		  var commands = e.target.result;
 		  program.start(commands); // Здесь 'this' будет ссылаться на 'program', если 'start' вызывается корректно
+		  if (commands === '') {
+			alert('Ошибка: Файл пустой!');
+			return; // Выход если файл пустой
+		  }
 		} catch(err) {
 		  program.error("Ошибка при загрузке файла: " + err.message); // 'error' должен быть методом 'program'
 		}
@@ -104,9 +108,6 @@ document.getElementById('loadButton').addEventListener('click', function() {
   }
 
 
-  program.start = function(commandsText) {
-	const self = this;
-	
 	program.start = function(commandsText) {
 		const self = this;
 		
@@ -146,13 +147,13 @@ document.getElementById('loadButton').addEventListener('click', function() {
 				recordingProcedure = true;
 				procedureName = args[0];
 			} else if (command === "IFBLOCK") {
-				if (ifBlockStack.length < 3) {
+				if (ifBlockStack.length + repeatStack.length < 3) {
 					ifBlockStack.push({
 						condition: args[0].toUpperCase(),
 						commands: []
 					});
 				} else {
-					console.error("Maximum if block nesting level exceeded");
+					alert("Maximum nesting level exceeded");
 				}
 			} else if (command === "ENDIF") {
 				if (ifBlockStack.length > 0) {
@@ -177,7 +178,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 				let repeatTimes = isNaN(Number(args[0])) ? parseInt(self.variables[args[0]], 10) : parseInt(args[0], 10);
 				let insideIfBlock = ifBlockStack.length > 0;
 	
-				if (repeatStack.length < 3) {
+				if (ifBlockStack.length + repeatStack.length < 3) {
 					repeatStack.push({
 						times: repeatTimes,
 						commands: [],
@@ -189,7 +190,7 @@ document.getElementById('loadButton').addEventListener('click', function() {
 						insideIfBlock: insideIfBlock
 					});
 				} else {
-					console.error("Maximum repeat block nesting level exceeded");
+					alert("Maximum nesting level exceeded");
 				}
 			} else if (command === "ENDREPEAT") {
 				let repeatBlock = repeatStack.pop();
@@ -230,6 +231,15 @@ document.getElementById('loadButton').addEventListener('click', function() {
 		commands.forEach(line => {
 			processCommand(line.trim());
 		});
-	}
-};
+		console.log(repeatStack)
+		if (ifBlockStack.length > 0) {
+			alert('Missing ENDIF for one or more IFBLOCK constructions');
+		} 
+		if (repeatStack.length > 0) {
+			alert('Missing ENDREPEAT for one or more REPEAT loops');
+		}
+		if (recordingProcedure) {
+			alert('Missing ENDPROC for the last PROCEDURE block');
+		}
+	}; 
   
